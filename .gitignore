@@ -1,3 +1,6 @@
 src/require.js
 src/order.js
 src/text.js
+src/qunit.js
+src/qunit.css
+node_modules

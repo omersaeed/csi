@@ -7,6 +7,9 @@
     "url": ""
   },
   "main": "server.js",
+  "bin": {
+    "component": "bin/component_proxy.js"
+  },
   "engines": {
     "node": "~0.6.11"
   },
@@ -21,8 +24,13 @@
     "node.extend": "=1.0.0",
     "t": "0.2.x",
     "js-yaml": "0.3.x",
-    "async": "0.1.x"
+    "async": "0.1.x",
+	"qunit": "0.5.x"
   },
   "devDependencies": {},
-  "optionalDependencies": {}
+  "optionalDependencies": {},
+  "component": {
+    "name": "csi",
+	"testDirectory": "test"
+  }
 }

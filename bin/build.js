@@ -6,14 +6,18 @@ var copy, main, build, clean,
     join = path.join,
     resolve = path.resolve,
     basename = path.basename,
+    dirname = path.dirname,
     exists = path.existsSync,
     moduleBase = resolve(join(__dirname, '..')),
     srcDir = join(moduleBase, 'src'),
     rjsDir = join(moduleBase, 'vendor/requirejs'),
+    qunitDir = join(dirname(require.resolve('qunit')), 'deps/qunit/qunit'),
     sources = [
         join(rjsDir, 'require.js'),
         join(rjsDir, 'text.js'),
-        join(rjsDir, 'order.js')
+        join(rjsDir, 'order.js'),
+        join(qunitDir, 'qunit.js'),
+        join(qunitDir, 'qunit.css')
     ];
 
 
@@ -29,7 +33,10 @@ build = function() {
 
 clean = function() {
     sources.forEach(function(src) {
-        fs.unlinkSync(join(srcDir, basename(src)));
+		src = join(srcDir, basename(src));
+		if (exists(src)) {
+			fs.unlinkSync(src);
+		}
     });
 };
 
