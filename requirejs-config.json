@@ -1,0 +1,9 @@
+{
+	"paths": {
+		"text": "./text",
+		"order": "./order",
+		"path": "./path",
+		"css": "./css"
+	}
+}
+

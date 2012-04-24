@@ -8,10 +8,10 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <% if (test) { %>
+  <% if (isTest) { %>
     <title>RequireJS and QUnit Test Fixture</title>
     <meta name="description" content="lightweight development fixture for RequireJS + QUnit testing">
-    <link rel="stylesheet" href="/static/qunit/qunit.css">
+		<link rel="stylesheet" href="<%= qunitCss %>">
   <% } %>
 </head>
 <body>
@@ -19,7 +19,7 @@
        chromium.org/developers/how-tos/chrome-frame-getting-started -->
   <!--[if lt IE 7]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
 
-  <% if (test) %>
+	<% if (isTest) { %>
     <h1 id="qunit-header">RequireJS and QUnit Test Fixture</h1>
 
     <h2 id="qunit-banner"></h2>
@@ -32,7 +32,7 @@
 
     <div id="qunit-fixture">test markup, will be hidden</div>
 
-    <script src="/static/qunit.js"></script>
+		<script src="<%= qunitJs %>"></script>
     <script>
       // stop QUnit from running so that we don't get a green banner til we've
       // actually passed all the tests
@@ -40,7 +40,7 @@
     </script>
   <% } %>
 
-  <script src="/static/require.js"></script>
+	<script src="<%= requireJs %>"></script>
 
   <%= extra %>
 

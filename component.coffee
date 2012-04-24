@@ -5,7 +5,7 @@ _ = require 'underscore'
 t = require 't'
 wrench = require 'wrench'
 yaml = require 'js-yaml'
-testServer = require 'siq-test-server'
+testServer = require './server'
 
 read = (fname, encoding='utf8') -> fs.readFileSync(fname, encoding)
 exists = path.existsSync

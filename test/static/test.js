@@ -6,4 +6,6 @@ require([
 		ok(a);
 		equal(a.name, 'a');
 	});
+
+	start();
 });
