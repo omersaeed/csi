@@ -1,0 +1,9 @@
+vendor/requirejs/README.md
+vendor/requirejs/dist
+vendor/requirejs/docs
+vendor/requirejs/domReady.js
+vendor/requirejs/index.html
+vendor/requirejs/tasks.txt
+vendor/requirejs/testBaseUrl.js
+vendor/requirejs/tests
+vendor/requirejs/updatesubs.sh
