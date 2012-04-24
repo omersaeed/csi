@@ -1,12 +1,12 @@
 build: src/require.js src/order.js src/text.js
 
-src/require.js: vendor/requirejs/require.js
+src/require.js: vendor/requirejs
 	node bin/build.js
 
-src/order.js: vendor/requirejs/order.js
+src/order.js: vendor/requirejs
 	node bin/build.js
 
-src/text.js: vendor/requirejs/text.js
+src/text.js: vendor/requirejs
 	node bin/build.js
 
 vendor/requirejs:
