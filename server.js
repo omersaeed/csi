@@ -3,17 +3,12 @@ var http = require('http'),
     os = require('os'),
     fs = require('fs'),
 	url = require('url'),
+    tty = require('tty'),
+    colors = require('colors'),
     _ = require('underscore'),
     async = require('async'),
-    // Buffer = require('buffer').Buffer,
     extend = require('node.extend'),
     indexPath = path.resolve(path.join(__dirname, 'templates/index.mtpl'));
-    // testBodyPath = path.resolve(path.join(path.dirname(__filename), 'test_body.html')),
-    // testHeadPath = path.resolve(path.join(path.dirname(__filename), 'test_head.html')),
-    // rjsBaseDir = path.dirname(require.resolve('siq-requirejs-base')),
-    // rjsStaticDir = path.join(rjsBaseDir, 'static'),
-    // rjsConfigFileName = path.join(__dirname, 'requirejs-config.json'),
-    // rjsConfig = JSON.parse(fs.readFileSync(rjsConfigFileName, 'utf8'));
 
 var contentType = {
     'html': 'text/html',
@@ -27,7 +22,16 @@ var defaultHeaders = {
 };
 
 var writeHead = function(req, resp, statusCode, headers) {
-    console.log(new Date() + ' [' + statusCode + ']: ' + req.url);
+    var d = new Date(),
+        seconds = d.getSeconds() < 10? '0' + d.getSeconds() : d.getSeconds(),
+        datestring = d.getHours() + ':' + d.getMinutes() + ':' + seconds,
+        line = datestring + ' [' + statusCode + ']: ' + req.url,
+        colorized = line;
+    if (tty.isatty(process.stdout.fd)) {
+        colorized = (+statusCode) >= 500? line.red.bold :
+                    (+statusCode) >= 400? line.red : line;
+    }
+    console.log(colorized);
     resp.writeHead(statusCode, headers);
 };
 
@@ -107,7 +111,7 @@ exports.createServer = function(staticDir, config, extra) {
 	return http.createServer(function(req, resp) {
 		var filename, u = url.parse(req.url, true),
 			requested = path.join(config.baseUrl || '', u.pathname + '.js');
-		if (!/\.((js)|(css))$/.test(u.pathname)) {
+		if (!/\.[a-z0-9]+$/i.test(u.pathname)) {
 			filename = path.join(path.dirname(staticDir), requested);
 			path.exists(filename, function(exists) {
 				if (exists) {

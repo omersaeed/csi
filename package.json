@@ -14,7 +14,8 @@
     "node": "~0.6.11"
   },
   "scripts": {
-    "install": "node bin/build.js"
+    "install": "node bin/build.js",
+	"test": "node_modules/.bin/coffee component.coffee -l test"
   },
   "dependencies": {
     "coffee-script": "1.2.x",
@@ -25,7 +26,8 @@
     "t": "0.2.x",
     "js-yaml": "0.3.x",
     "async": "0.1.x",
-	"qunit": "0.5.x"
+	"qunit": "0.5.x",
+    "colors": "0.6.x"
   },
   "devDependencies": {},
   "optionalDependencies": {},

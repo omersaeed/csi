@@ -22,6 +22,9 @@ vendor/requirejs/%.js:
 node_modules:
 	npm install
 
+test: build
+	node_modules/.bin/coffee component.coffee -l test
+
 clean:
 	node bin/build.js -c
 
