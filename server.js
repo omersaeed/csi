@@ -90,7 +90,7 @@ var serveIndex = function(req, resp, filename, config, extra) {
 			qunitJs: path.join(csiPath, 'qunit.js'),
 			requireJs: path.join(csiPath, 'require.js'),
 			extra: extra || '',
-			config: JSON.stringify(config),
+			config: JSON.stringify(config, null, " "),
 			jsPath: filename
 		});
 

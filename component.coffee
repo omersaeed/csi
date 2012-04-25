@@ -1,13 +1,13 @@
-fs = require 'fs'
-path = require 'path'
-extend = require 'node.extend'
-_ = require 'underscore'
-t = require 't'
-wrench = require 'wrench'
-yaml = require 'js-yaml'
-testServer = require './server'
+fs = require "fs"
+path = require "path"
+extend = require "node.extend"
+_ = require "underscore"
+t = require "t"
+wrench = require "wrench"
+yaml = require "js-yaml"
+testServer = require "./server"
 
-read = (fname, encoding='utf8') -> fs.readFileSync(fname, encoding)
+read = (fname, encoding="utf8") -> fs.readFileSync(fname, encoding)
 exists = path.existsSync
 join = path.join
 argv = null
@@ -19,39 +19,39 @@ node $0 [-l] [--list] test
 their dependencies -- imagine that!
 """
 
-pkgJson = (dir = '.') ->
-  JSON.parse read(join(dir, 'package.json'))
+pkgJson = (dir = ".") ->
+  JSON.parse read(join(dir, "package.json"))
 
-componentName = (dir = '.', json = null) ->
+componentName = (dir = ".", json = null) ->
   (json or pkgJson(dir)).component?.name
 
-sourceDirectory = (dir = '.') ->
-  pkgJson(dir).component?.sourceDirectory || 'src'
+sourceDirectory = (dir = ".") ->
+  pkgJson(dir).component?.sourceDirectory || "src"
 
-testDirectory = (dir = '.') ->
-  pkgJson(dir).component?.testDirectory || '.test'
+testDirectory = (dir = ".") ->
+  pkgJson(dir).component?.testDirectory || ".test"
 
-testTemplate = (dir = '.') ->
+testTemplate = (dir = ".") ->
   tt = pkgJson(dir).component?.testTemplate
-  if tt then read join(dir,tt) else ''
+  if tt then read join(dir,tt) else ""
 
-isComponent = (dir = '.', json = null) ->
+isComponent = (dir = ".", json = null) ->
   if json
     return not not componentName(dir, json)
-  exists(join dir, 'package.json') and (not not componentName(dir))
+  exists(join dir, "package.json") and (not not componentName(dir))
 
-requirejsConfig = (filename, dir = '.') ->
-  filename ||= join(dir, 'requirejs-config.json')
+requirejsConfig = (filename, dir = ".") ->
+  filename ||= join(dir, "requirejs-config.json")
   if exists filename then JSON.parse read(filename) else {}
 
-makePathsAbsolute = (rjsConfigObj = {}, root = 'components') ->
+makePathsAbsolute = (rjsConfigObj = {}, root = "components") ->
   extend true, rjsConfigObj,
     paths: _.reduce(rjsConfigObj.paths, ((memo, v, k) ->
-      memo[k] = v.replace(/^.\//, root.replace(/\/$/, '') + '/')
+      memo[k] = v.replace(/^.\//, root.replace(/\/$/, "") + "/")
       memo
     ), {})
 
-addComponentToConfig = (rjsConfigObj = {}, dir = '.', root = 'components') ->
+addComponentToConfig = (rjsConfigObj = {}, dir = ".", root = "components") ->
   paths = {}
   paths[componentName()] = join root, componentName()
   extend true, {paths: paths}, rjsConfigObj
@@ -63,23 +63,23 @@ installTo = (tgtDir, link = false, src, name = null) ->
     if link
       orig = path.resolve process.cwd()
       process.chdir tgtDir
-      fs.symlinkSync join(orig, src), name, 'dir'
+      fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
     else
       wrench.copyDirSyncRecursive src, join(tgtDir, name)
 
 allNodeModules = () ->
   modules = {}
-  t.dfs directories = {path: '.'}, (n) ->
-    if exists join(n.path, 'package.json')
+  t.dfs directories = {path: "."}, (n) ->
+    if exists join(n.path, "package.json")
       n.json = pkgJson n.path
-    if exists join(n.path, 'requirejs-config.json')
+    if exists join(n.path, "requirejs-config.json")
       n.config = requirejsConfig(null, n.path)
-    modulesDir = join n.path, 'node_modules'
+    modulesDir = join n.path, "node_modules"
     if exists modulesDir
       n.children = _(fs.readdirSync(modulesDir)).map((d) ->
         full = join modulesDir, d
-        fs.statSync(full).isDirectory() and d isnt '.bin' and full
+        fs.statSync(full).isDirectory() and d isnt ".bin" and full
       ).filter(_.identity).map (d) -> {path: d}
   directories
 
@@ -89,27 +89,27 @@ allComponents = () ->
   t.dfs allNodeModules(), (m) ->
     if m.json and isComponent(null, m.json) and m.json.name not in names()
       results.push(m)
-  _.filter results, (m) -> m.path isnt '.'
+  _.filter results, (m) -> m.path isnt "."
 
 provide = (pth) ->
   if not exists pth
-    _.reduce [''].concat(pth.split('/')), (soFar, dir) ->
+    _.reduce [""].concat(pth.split("/")), (soFar, dir) ->
       fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
-      soFar += (if soFar then '/' else '') + dir
+      soFar += (if soFar then "/" else "") + dir
 
 discoverTests = (dir) ->
-  dir ||= if isComponent() then join(testDirectory(), 'static') else 'static'
+  dir ||= if isComponent() then join(testDirectory(), "static") else "static"
   return [] if not exists dir
   results = []
-  t.dfs dirTree = {path: '.'}, (n) ->
-    if /test[^\/]*\.js$/.test(n.path) and path.basename(n.path)[0] isnt '.'
+  t.dfs dirTree = {path: "."}, (n) ->
+    if /test[^\/]*\.js$/.test(n.path) and path.basename(n.path)[0] isnt "."
       results.push(n.path)
     if fs.statSync(join(dir, n.path)).isDirectory()
       n.children = fs.readdirSync(join(dir, n.path)).map (d) ->
         path: join n.path, d
   results
 
-getConfig = (root = 'components') ->
+getConfig = (root = "components") ->
   components = allComponents()
   componentPath = (c) ->
     ret = {paths: {}}
@@ -118,6 +118,7 @@ getConfig = (root = 'components') ->
   componentConfig = (c) ->
     makePathsAbsolute(c.config, join(root, componentName(c.path)))
   thisComponentConfig = () ->
+    if not isComponent() then return {}
     destPath = join(root, componentName())
     addComponentToConfig(makePathsAbsolute(requirejsConfig(), destPath))
   extend.apply this, [true]
@@ -126,12 +127,12 @@ getConfig = (root = 'components') ->
     .concat([thisComponentConfig()])
 
 getTestTemplate = () ->
-  components = allComponents().concat([{path: '.'}])
-  (testTemplate(component.path) for component in components).join('\n')
+  components = allComponents().concat([{path: "."}])
+  (testTemplate(component.path) for component in components).join("\n")
 
-stringBundles = (dir = '.') ->
-  stringsYml = join(dir, 'strings.yml')
-  stringsYaml = join(dir, 'strings.yaml')
+stringBundles = (dir = ".") ->
+  stringsYml = join(dir, "strings.yml")
+  stringsYaml = join(dir, "strings.yaml")
   if exists stringsYml
     yaml.load read(stringsYml)
   else if exists stringsYaml
@@ -145,51 +146,64 @@ allStringBundles = () ->
   ), {})
 
 stringBundlesAsRequirejsModule = () ->
+  bundles = JSON.stringify(allStringBundles(), null, "    ")
+    .replace(/\n/g, "\n      ")
   """
   <script>
     define('strings', [], function() {
-        return #{JSON.stringify(allStringBundles())};
+        return #{bundles};
     });
   </script>
   """
 
 commands =
-  install:
-    action: () ->
-      components = allComponents()
-      if isComponent()
-        componentsDirName = join testDirectory(), 'static/components'
-      else
-        componentsDirName = 'static/components'
-      provide componentsDirName
-      for component in components
-        src = join(component.path, sourceDirectory(component.path))
-        name = componentName(null, component.json)
-        installTo componentsDirName, argv.link, src, name
-  test:
-    action: () ->
-      port = process.env.PORT || 1335
-      host = process.env.HOST || 'localhost'
-      listTests = (tests) ->
-        for test in tests
-          console.log("http://#{host}:#{port}/#{test.replace(/\.js$/, '')}")
-      components = allComponents()
-      testDirName = testDirectory()
-      staticDirName = join (if isComponent() then testDirName else ''), 'static'
-      return listTests(discoverTests(staticDirName)) if argv.list
-      if isComponent() and not exists testDirName
-        commands.install.action()
-      if not exists join(staticDirName, 'components', componentName())
-        commands.install.action()
-        installTo join(staticDirName, 'components'), true
-      tests = discoverTests staticDirName
-      extraHtml = getTestTemplate() + '\n' + stringBundlesAsRequirejsModule()
-      testServer
-        .createServer(staticDirName, getConfig(), extraHtml)
-        .listen(port, host)
-      console.log "serving at http://#{host}:#{port}"
-      console.log 'available tests:'
-      listTests tests
+
+  install: () ->
+    components = allComponents()
+    if isComponent()
+      componentsDirName = join testDirectory(), "static/components"
+    else
+      componentsDirName = "static/components"
+    provide componentsDirName
+    for component in components
+      src = join(component.path, sourceDirectory(component.path))
+      name = componentName(null, component.json)
+      installTo componentsDirName, argv.link, src, name
+
+  test: () ->
+    port = process.env.PORT || 1335
+    host = process.env.HOST || "localhost"
+    listTests = (tests) ->
+      for test in tests
+        console.log("http://#{host}:#{port}/#{test.replace(/\.js$/, "")}")
+    components = allComponents()
+    testDirName = testDirectory()
+    staticDirName = join (if isComponent() then testDirName else ""), "static"
+    return listTests(discoverTests(staticDirName)) if argv.list
+    if isComponent() and not exists testDirName
+      commands.install()
+    if not exists join(staticDirName, "components", componentName())
+      commands.install()
+      installTo join(staticDirName, "components"), true
+    tests = discoverTests staticDirName
+    extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
+    testServer
+      .createServer(staticDirName, getConfig(), extraHtml)
+      .listen(port, host)
+    console.log "serving at http://#{host}:#{port}"
+    console.log "available tests:"
+    listTests tests
+
+  template: (cmd, args...) ->
+    config = getConfig()
+    switch cmd
+      when "requirejs"
+        console.log join(config.baseUrl || '', config.paths.csi, "require.js")
+      when "extra"
+        console.log stringBundlesAsRequirejsModule()
+      when "config"
+        console.log JSON.stringify(config, null, "    ")
+
 
 commandNames = _.reduce(commands, ((memo, v, k) ->
   memo[k] = true
@@ -198,25 +212,25 @@ commandNames = _.reduce(commands, ((memo, v, k) ->
 ), {})
 
 exports.run = () ->
-  argv = require('optimist')
+  argv = require("optimist")
     .usage(usage)
-    .boolean(['l', 'link']).alias('l', 'link')
-    .describe('l', 'install components as symlinks (useful for development)')
-    .boolean('list')
-    .describe('list', 'when running the "test" command, just list tests')
-    .alias('h', 'help')
+    .boolean(["l", "link"]).alias("l", "link")
+    .describe("l", "install components as symlinks (useful for development)")
+    .boolean("list")
+    .describe("list", "when running the 'test' command, just list tests")
+    .alias("h", "help")
     .argv
 
   command = argv._[0]
 
   if argv.help
-    console.log require('optimist').help()
+    console.log require("optimist").help()
     process.exit 0
   if not command or not commandNames[command]
     console.error "ERROR: command must be one of: #{k for k,v of commands}\n"
-    require('optimist').showHelp()
+    require("optimist").showHelp()
     process.exit 1
 
-  commands[command].action()
+  commands[command](argv._[1..]...)
 
 exports.run() if require.main is module
