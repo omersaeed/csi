@@ -62,7 +62,11 @@ var serve404 = function(req, resp) {
 var serveFile = function(req, resp, filename) {
     fs.readFile(filename, function(err, data) {
         if (err) {
-            serveError(req, resp, err);
+            if (err.code === 'ENOENT') {
+                serve404(req, resp);
+            } else {
+                serveError(req, resp, err);
+            }
             return;
         }
         writeHead(req, resp, 200, _.extend({}, defaultHeaders, {
