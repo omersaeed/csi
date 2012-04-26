@@ -11,89 +11,114 @@
 /*global document: true, setTimeout: true, define: true */
 
 (function () {
-	"use strict";
+    "use strict";
 
-	var doc = document,
-		head = doc.head || doc.getElementsByTagName('head')[0],
-		// Eliminate browsers that admit to not support the link load event (e.g. Firefox < 9)
-		nativeLoad = doc.createElement('link').onload === null ? undefined : false,
-		a = doc.createElement('a');
+    var doc = document,
+        head = doc.head || doc.getElementsByTagName('head')[0],
+        // Eliminate browsers that admit to not support the link load event (e.g. Firefox < 9)
+        nativeLoad = doc.createElement('link').onload === null ? undefined : false,
+        a = doc.createElement('a');
 
-	function createLink(url) {
-		var link = doc.createElement('link');
+    function createLink(url) {
+        var link = doc.createElement('link');
 
-		link.rel = "stylesheet";
-		link.type = "text/css";
-		link.href = url;
+        link.rel = "stylesheet";
+        link.type = "text/css";
+        link.href = url;
 
-		return link;
-	}
+        return link;
+    }
 
-	function styleSheetLoaded(url) {
-		var i;
+    function styleSheetLoaded(url) {
+        var i;
 
-		// Get absolute url by assigning to a link and reading it back below
-		a.href = url;
+        // Get absolute url by assigning to a link and reading it back below
+        a.href = url;
 
-		for (i in doc.styleSheets) {
-			if (doc.styleSheets[i].href === a.href) {
-				return true;
-			}
-		}
+        for (i in doc.styleSheets) {
+            if (doc.styleSheets[i].href === a.href) {
+                return true;
+            }
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	/**
-	 * Load using the browsers built-in load event on link tags
-	 */
-	function loadLink(url, load) {
-		var link = createLink(url);
+    // we want to support adding an ordering parameter to the css, so that we
+    // can enforce a global ordering like so:
+    //
+    //  'css!100:style1.css'
+    //  'css!200:style2.css'
+    //
+    // in this case style1.css would always come before style2.css in the
+    // <head> even if it was loaded second
+    function appendToHead(el, order) {
+        var i, child, len, children = head.childNodes, tag, curOrder, inserted;
+        order = order || 0;
+        el.setAttribute('data-order', order);
+        for (i = 0, len = children.length; i < len; i++) {
+            child = children[i];
+            if (child.nodeType === 3) {
+                continue; // skip text nodes
+            }
+            tag = child.tagName.toLowerCase();
+            if (tag === 'style' || (tag === 'link' && /css/i.test(child.type))) {
+                curOrder = +child.getAttribute('data-order');
+                if (curOrder > order) {
+                    inserted = head.insertBefore(el, child);
+                }
+            }
+        }
+        if (!inserted) {
+            head.appendChild(el);
+        }
+    }
 
-		link.onload = function () {
-			load();
-		};
+    // Load using the browsers built-in load event on link tags
+    function loadLink(url, load, order) {
+        var link = createLink(url);
 
-		head.appendChild(link);
-	};
+        link.onload = function () {
+            load();
+        };
 
-	/**
-	 * Insert a script tag and use it's onload & onerror to know when
-	 * the CSS is loaded, this will unfortunately also fire on other
-	 * errors (file not found, network problems)
-	 */
-	function loadScript(url, load) {
-		var link = createLink(url),
-			script = doc.createElement('script');
+        // head.appendChild(link);
+        appendToHead(link, order);
+    }
 
-		head.appendChild(link);
+    // Insert a script tag and use it's onload & onerror to know when the CSS
+    // is loaded, this will unfortunately also fire on other errors (file not
+    // found, network problems)
+    function loadScript(url, load) {
+        var link = createLink(url),
+            script = doc.createElement('script');
 
-		script.onload = script.onerror = function () {
-			head.removeChild(script);
+        head.appendChild(link);
 
-			// In Safari the stylesheet might not yet be applied, when
-			// the script is loaded so we poll document.styleSheets for it
-			var checkLoaded = function () {
-				if (styleSheetLoaded(url)) {
-					load();
+        script.onload = script.onerror = function () {
+            head.removeChild(script);
 
-					return;
-				}
+            // In Safari the stylesheet might not yet be applied, when
+            // the script is loaded so we poll document.styleSheets for it
+            var checkLoaded = function () {
+                if (styleSheetLoaded(url)) {
+                    load();
 
-				setTimeout(checkLoaded, 25);
-			};
-			checkLoaded();
-		};
-		script.src = url;
+                    return;
+                }
 
-		head.appendChild(script);
-	};
+                setTimeout(checkLoaded, 25);
+            };
+            checkLoaded();
+        };
+        script.src = url;
 
-    /**
-     * This was added for StoredIQ, since we can't have JS errors caused by
-     * loading CSS as JS.
-     */
-    function loadCssAsText(url, req, load) {
+        head.appendChild(script);
+    }
+
+    // This was added for StoredIQ, since we can't have JS errors caused by
+    // loading CSS as JS.
+    function loadCssAsText(url, req, load, order) {
         req(['text!' + url], function(text) {
             if (text.replace(/^\s+|\s+$/g,"") === '') {
                 load();
@@ -108,67 +133,76 @@
                 css.innerHTML = text;
             }
 
-            document.getElementsByTagName('head')[0].appendChild(css);
+            appendToHead(css, order);
+            // document.getElementsByTagName('head')[0].appendChild(css);
 
             setTimeout(load, 0);
         });
-    };
+    }
 
-	function loadSwitch(url, req, load) {
-		if (nativeLoad) {
-			loadLink(url, load);
-		} else {
-			// loadScript(url, load);
-            loadCssAsText(url, req, load);
-		}
-	};
+    function loadSwitch(url, req, load, order) {
+        if (nativeLoad) {
+            loadLink(url, load, order);
+        } else {
+            // loadScript(url, load);
+            loadCssAsText(url, req, load, order);
+        }
+    }
 
-	define(function () {
-		var css;
+    define(function () {
+        var css;
 
-		css = {
-			version: '0.3.1',
+        css = {
+            version: '0.3.1',
 
-			load: function (name, req, load) { //, config (not used)
-				// convert name to actual url
-				var url = req.toUrl(
-					// Append default extension
-					name.search(/\.(css|less|scss)$/i) === -1 ? name + '.css' : name
-				);
+            load: function (name, req, load) { //, config (not used)
+                var url, order, split = name.split(':');
 
-				// Test if the browser supports the link load event,
-				// in case we don't know yet (mostly WebKit)
-				if (nativeLoad === undefined) {
-					// Create a link element with a data url,
-					// it would fire a load event immediately
-					var link = createLink('data:text/css,');
+                // pull off the optional ordering from the name, something like
+                // the '100' in 'css!100:style.css'
+                if (name.indexOf(':') >= 0) {
+                    name = split[1];
+                    order = +split[0];
+                } else {
+                    name = split[0];
+                }
 
-					link.onload = function () {
-						// Native link load event works
-						nativeLoad = true;
-					};
+                // convert name to actual url
+                url = req.toUrl(/\.css$/.test(name) ? name : name + '.css');
 
-					head.appendChild(link);
+                // Test if the browser supports the link load event,
+                // in case we don't know yet (mostly WebKit)
+                if (nativeLoad === undefined) {
+                    // Create a link element with a data url,
+                    // it would fire a load event immediately
+                    var link = createLink('data:text/css,');
 
-					// Schedule function in event loop, this will
-					// execute after a potential execution of the link onload
-					setTimeout(function () {
-						head.removeChild(link);
+                    link.onload = function () {
+                        // Native link load event works
+                        nativeLoad = true;
+                    };
 
-						if (nativeLoad !== true) {
-							// Native link load event is broken
-							nativeLoad = false;
-						}
+                    head.appendChild(link);
 
-						loadSwitch(url, req, load);
-					}, 0);
-				} else {
-					loadSwitch(url, req, load);
-				}
-			}
-		};
+                    // Schedule function in event loop, this will
+                    // execute after a potential execution of the link onload
+                    setTimeout(function () {
+                        head.removeChild(link);
 
-		return css;
-	});
+                        if (nativeLoad !== true) {
+                            // Native link load event is broken
+                            nativeLoad = false;
+                        }
+
+                        loadSwitch(url, req, load, order);
+                    }, 0);
+                } else {
+                    loadSwitch(url, req, load, order);
+                }
+            }
+        };
+
+        return css;
+    });
 }());
 
