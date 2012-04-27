@@ -1,3 +1,278 @@
+/*
+---
+name : sg-regex-tools
+description : A few super-handy tools for messing around with RegExp
+
+authors   : Thomas Aylott
+copyright : © 2010 Thomas Aylott
+license   : MIT
+
+provides : [combineRegExp]
+...
+*/
+;(function(exports){
+
+exports.combineRegExp = function(regex, group){
+	if (regex.source) regex = [regex]
+	
+	var names = [], i, source = '', this_source
+	
+	for (i = 0; i < regex.length; ++i){ if (!regex[i]) continue
+		this_source = regex[i].source || ''+regex[i]
+		if (this_source == '|') source += '|'
+		else {
+			source += (group?'(':'') + this_source.replace(/\s/g,'') + (group?')':'')
+			if (group) names.push(group)
+		}
+		if (regex[i].names)	names = names.concat(regex[i].names)
+	}
+	try {
+		regex = new RegExp(source,'gm')
+	}
+	catch (e){
+		throw new SyntaxError('Invalid Syntax: ' + source +'; '+ e)
+	}
+	// [key] → 1
+	for (i = -1; i < names.length; ++i) names[names[i]] = i + 1
+	// [1] → key
+	regex.names = names
+	return regex
+}
+
+}(typeof exports != 'undefined' ? exports : this))
+;(function() {
+var require;
+/*
+---
+name    : SheetParser.CSS
+
+authors   : Thomas Aylott
+copyright : © 2010 Thomas Aylott
+license   : MIT
+
+provides : SheetParser.CSS
+requires : combineRegExp
+...
+*/
+;(function(exports){
+	
+
+/*<depend>*/
+var UNDEF = {undefined:1}
+if (!exports.SheetParser) exports.SheetParser = {}
+
+/*<CommonJS>*/
+var combineRegExp = UNDEF[typeof require]
+	?	exports.combineRegExp
+	:	require('./sg-regex-tools').combineRegExp
+var SheetParser = exports.SheetParser
+/*</CommonJS>*/
+
+/*<debug>*/;if (UNDEF[typeof combineRegExp]) throw new Error('Missing required function: "combineRegExp"');/*</debug>*/
+/*</depend>*/
+
+
+var CSS = SheetParser.CSS = {version: '1.0.2 dev'}
+
+CSS.trim = trim
+function trim(str){
+	// http://blog.stevenlevithan.com/archives/faster-trim-javascript
+	var	str = (''+str).replace(/^\s\s*/, ''),
+		ws = /\s/,
+		i = str.length;
+	while (ws.test(str.charAt(--i)));
+	return str.slice(0, i + 1);
+}
+
+CSS.camelCase = function(string){
+	return ('' + string).replace(camelCaseSearch, camelCaseReplace)
+}
+var camelCaseSearch = /-\D/g
+function camelCaseReplace(match){
+	return match.charAt(1).toUpperCase()
+}
+
+CSS.parse = function(cssText){
+	var	found
+	,	rule
+	,	rules = {length:0}
+	,	keyIndex = -1
+	,	regex = this.parser
+	,	names = CSS.parser.names
+	,	i,r,l
+	,	ruleCount
+	
+	rules.cssText = cssText = trim(cssText)
+	
+	// strip comments
+	cssText = cssText.replace(CSS.comment, '');
+	
+	regex.lastIndex = 0
+	while ((found = regex.exec(cssText))){
+		// avoid an infinite loop on zero-length keys
+		if (regex.lastIndex == found.index) ++ regex.lastIndex
+		
+		// key:value
+		if (found[names._key]){
+			rules[rules.length ++] = found[names._key]
+			rules[found[names._key]] = found[names._value]
+			rules[CSS.camelCase(found[names._key])] = found[names._value]
+			continue
+		}
+		
+		rules[rules.length++] = rule = {}
+		for (i = 0, l = names.length; i < l; ++i){
+			if (!(names[i-1] && found[i])) continue
+			rule[names[i-1]] = trim(found[i])
+		}
+	}
+	
+	var atKey, atRule, atList, atI
+	for (i = 0, l = rules.length; i < l; ++i){
+		if (!rules[i]) continue
+		
+		if (rules[i]._style_cssText){
+			rules[i].style = CSS.parse(rules[i]._style_cssText)
+			delete rules[i]._style_cssText
+		}
+		
+		// _atKey/_atValue
+		if (atKey = rules[i]._atKey){
+			atKey = CSS.camelCase(atKey)
+			atRule = {length:0}
+			rules[i][atKey] = atRule
+			atRule["_source"] =
+			atRule[atKey + "Text"] = rules[i]._atValue
+			atList = ('' + rules[i]._atValue).split(/,\s*/)
+			for (atI = 0; atI < atList.length; ++atI){
+				atRule[atRule.length ++] = atList[atI]
+			}
+			rules[i].length = 1
+			rules[i][0] = atKey
+			delete rules[i]._atKey
+			delete rules[i]._atValue
+		}
+		
+		if (rules[i].style)
+		for (ruleCount = -1, r = -1, rule; rule = rules[i].style[++r];){
+			if (typeof rule == 'string') continue
+			rules[i][r] = (rules[i].cssRules || (rules[i].cssRules = {}))[++ ruleCount]  = rule
+			rules[i].cssRules.length = ruleCount + 1
+			rules[i].rules = rules[i].cssRules
+		}
+	}
+	
+	return rules
+}
+
+var x = combineRegExp
+var OR = '|'
+
+;(CSS.at = x(/\s*@([-a-zA-Z0-9]+)\s+(([\w-]+)?[^;{]*)/))
+.names=[         '_atKey',           '_atValue', 'name']
+
+CSS.atRule = x([CSS.at, ';'])
+
+;(CSS.keyValue_key = x(/([-a-zA-Z0-9]+)/))
+.names=[                '_key']
+
+;(CSS.keyValue_value_end = x(/(?:;|(?=\})|$)/))
+
+;(CSS.notString = x(/[^"']+/))
+;(CSS.stringSingle = x(/"(?:[^"]|\\")*"/))
+;(CSS.stringDouble = x(/'(?:[^']|\\')*'/))
+;(CSS.string = x(['(?:',CSS.stringSingle ,OR, CSS.stringDouble,')']))
+;(CSS.propertyValue = x([/[^;}]+/, CSS.keyValue_value_end]))
+
+var rRound = "(?:[^()]|\\((?:[^()]|\\((?:[^()]|\\((?:[^()]|\\([^()]*\\))*\\))*\\))*\\))"
+
+;(CSS.keyValue_value = x(
+[
+	x(['((?:'
+	,	CSS.stringSingle
+	,	OR
+	,	CSS.stringDouble
+	,	OR
+	,	"\\("+rRound+"*\\)"
+	,	OR
+	,	/[^;}()]/ // not a keyValue_value terminator
+	,	')*)'
+	])
+,	CSS.keyValue_value_end
+])).names = ['_value']
+
+;(CSS.keyValue = x([CSS.keyValue_key ,/\s*:\s*/, CSS.keyValue_value]))
+
+;(CSS.comment = x(/\/\*\s*((?:[^*]|\*(?!\/))*)\s*\*\//))
+.names=[                   'comment']
+
+;(CSS.selector = x(['(',/\s*(\d+%)\s*/,OR,'(?:',/[^{}'"()]|\([^)]*\)|\[[^\]]*\]/,')+',')']))
+.names=[    'selectorText','keyText']
+
+var rCurly = "(?:[^{}]|\\{(?:[^{}]|\\{(?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*\\})*\\})"
+var rCurlyRound = "(?:[^{}()]+|\\{(?:[^{}()]+|\\{(?:[^{}()]+|\\{(?:[^{}()]+|\\{[^{}()]*\\})*\\})*\\})*\\})"
+
+;(CSS.block = x("\\{\\s*((?:"+"\\("+rRound+"*\\)|"+rCurly+")*)\\s*\\}"))
+.names=[              '_style_cssText']
+
+CSS.selectorBlock = x([CSS.selector, CSS.block])
+
+CSS.atBlock = x([CSS.at, CSS.block])
+
+CSS.parser = x
+(
+	[	x(CSS.comment)
+	,	OR
+	,	x(CSS.atBlock)
+	,	OR
+	,	x(CSS.atRule)
+	,	OR
+	,	x(CSS.selectorBlock)
+	,	OR
+	,	x(CSS.keyValue)
+	]
+,	'cssText'
+)
+
+
+})(typeof exports != 'undefined' ? exports : this);
+
+})();/*global SheetParser*/
+;(function(context) {
+    var parse, updateCssPaths, url, newUrl,
+        urlRE = /url\((["']?)([^)]+)\1\)/i;
+    updateCssPaths = function(cssText, callback) {
+        var i, j, len, rule, propLen, prop, style,
+            parsed = parse.call(SheetParser.CSS, cssText),
+            output = [];
+
+        for (i = 0, len = parsed.length; i < len; i++) {
+            rule = parsed[i];
+            style = rule.style;
+            output.push('\n'+rule.selectorText+' {\n');
+            for (j = 0, propLen = style.length; j < propLen; j++) {
+                prop = style[j];
+                url = style[prop].match(urlRE);
+                style[prop] = callback(rule.selectorText, prop, style[prop], url && url[2]);
+                style[SheetParser.CSS.camelCase(prop)] = style[prop];
+                output.push('  '+prop+': '+style[prop]+';\n');
+            }
+            output.push('}\n');
+        }
+        return output.join('');
+    };
+    if (require) {
+        if (typeof define === 'function' && define.amd) {
+            parse = SheetParser.CSS.parse;
+            context.updateCssPaths = updateCssPaths;
+        } else {
+            parse = function(cssText) {
+                return new require('Sheet').Sheet(cssText);
+            };
+            exports.updateCssPaths = updateCssPaths;
+        }
+    }
+})(this);
 /**
  * @license RequireCSS 0.3.1 Copyright (c) 2011, VIISON All Rights Reserved.
  * Available via the MIT or new BSD license.
@@ -14,10 +289,17 @@
     "use strict";
 
     var doc = document,
+		isObject = function(obj) { return obj === Object(obj); },
+		basename = function(path) {
+			var i = path.length-1;
+			while (path[i--] !== '/');
+			return path.slice(0, i+1);
+		},
         head = doc.head || doc.getElementsByTagName('head')[0],
         // Eliminate browsers that admit to not support the link load event (e.g. Firefox < 9)
         nativeLoad = doc.createElement('link').onload === null ? undefined : false,
-        a = doc.createElement('a');
+        a = doc.createElement('a'),
+		loadAsStyleTags;
 
     function createLink(url) {
         var link = doc.createElement('link');
@@ -118,7 +400,7 @@
 
     // This was added for StoredIQ, since we can't have JS errors caused by
     // loading CSS as JS.
-    function loadCssAsText(url, req, load, order) {
+    function loadCssAsText(url, req, load, config, order) {
         req(['text!' + url], function(text) {
             if (text.replace(/^\s+|\s+$/g,"") === '') {
                 load();
@@ -126,6 +408,13 @@
 
             var css = document.createElement('style');
             css.setAttribute('type', 'text/css');
+
+			if (typeof window.updateCssPaths !== 'undefined') {
+				text = window.updateCssPaths(text, function(selector, property, value, cssUrl) {
+					return cssUrl && cssUrl[0] !== '/'?
+						value.replace(cssUrl, basename(url)+'/'+cssUrl) : value;
+				});
+			}
 
             if (css.styleSheet) { // b/c of IE...
                 css.styleSheet.cssText = text;
@@ -140,12 +429,12 @@
         });
     }
 
-    function loadSwitch(url, req, load, order) {
-        if (nativeLoad) {
-            loadLink(url, load, order);
+    function loadSwitch(url, req, load, config, order) {
+        if (!loadAsStyleTags && nativeLoad) {
+            loadLink(url, load, config, order);
         } else {
             // loadScript(url, load);
-            loadCssAsText(url, req, load, order);
+            loadCssAsText(url, req, load, config, order);
         }
     }
 
@@ -155,8 +444,12 @@
         css = {
             version: '0.3.1',
 
-            load: function (name, req, load) { //, config (not used)
+            load: function (name, req, load, config) {
                 var url, order, split = name.split(':');
+
+				if (isObject(config.css)) {
+					loadAsStyleTags = config.css.loadAsStyleTags;
+				}
 
                 // pull off the optional ordering from the name, something like
                 // the '100' in 'css!100:style.css'
@@ -194,10 +487,10 @@
                             nativeLoad = false;
                         }
 
-                        loadSwitch(url, req, load, order);
+                        loadSwitch(url, req, load, config, order);
                     }, 0);
                 } else {
-                    loadSwitch(url, req, load, order);
+                    loadSwitch(url, req, load, config, order);
                 }
             }
         };

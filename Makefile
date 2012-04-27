@@ -1,4 +1,5 @@
-build: src/require.js src/order.js src/text.js src/qunit.js src/qunit.css
+build: src/require.js src/order.js src/text.js src/qunit.js src/qunit.css bin/build.js lib/css_requirejs_plugin.js lib/css_rewrite.js
+	node bin/build.js
 
 src/require.js: vendor/requirejs/require.js
 	node bin/build.js
@@ -31,4 +32,4 @@ clean:
 distclean: clean
 	rm -rf node_modules || true
 
-.PHONY: clean distclean
+.PHONY: clean distclean build

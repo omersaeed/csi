@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-var copy, main, build, clean,
+var copy, sheetParserWrapper, build, clean, main,
     fs = require('fs'),
+    read = function(filename) { return fs.readFileSync(filename, 'utf8'); },
     path = require('path'),
     join = path.join,
     resolve = path.resolve,
@@ -25,10 +26,26 @@ copy = function(fromPath, toPath) {
     fs.writeFileSync(toPath, fs.readFileSync(fromPath, 'utf8'));
 };
 
+sheetParserWrapper = function(js) {
+    return ';(function() {\nvar require;\n' + js + '\n})();';
+};
+
 build = function() {
+    var sheetPath = dirname(require.resolve('Sheet')),
+        sheetRegExPath = join(sheetPath, 'sg-regex-tools.js'),
+        sheetParserPath = join(sheetPath, 'SheetParser.CSS.js');
     sources.forEach(function(src) {
         copy(src, join(srcDir, basename(src)));
     });
+
+    fs.writeFileSync(
+            'src/css.js',
+            [
+                read(sheetRegExPath),
+                sheetParserWrapper(read(sheetParserPath)),
+                read('lib/css_rewrite.js'),
+                read('lib/css_requirejs_plugin.js')
+            ].join(''));
 };
 
 clean = function() {
