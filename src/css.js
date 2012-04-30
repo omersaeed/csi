@@ -253,7 +253,8 @@ CSS.parser = x
             for (j = 0, propLen = style.length; j < propLen; j++) {
                 prop = style[j];
                 url = style[prop].match(urlRE);
-                style[prop] = callback(rule.selectorText, prop, style[prop], url && url[2]);
+                url = url && url[2].slice(0, 5) !== 'data:'? url[2] : null;
+                style[prop] = callback(rule.selectorText, prop, style[prop], url);
                 style[SheetParser.CSS.camelCase(prop)] = style[prop];
                 output.push('  '+prop+': '+style[prop]+';\n');
             }
@@ -408,6 +409,7 @@ CSS.parser = x
 
             var css = document.createElement('style');
             css.setAttribute('type', 'text/css');
+            css.setAttribute('data-sourceurl', url);
 
 			if (typeof window.updateCssPaths !== 'undefined') {
 				text = window.updateCssPaths(text, function(selector, property, value, cssUrl) {
