@@ -357,7 +357,7 @@ CSS.parser = x
     }
 
     // Load using the browsers built-in load event on link tags
-    function loadLink(url, load, order) {
+    function loadLink(url, load, config, order) {
         var link = createLink(url);
 
         link.onload = function () {
