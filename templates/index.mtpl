@@ -45,7 +45,8 @@
   <%= extra %>
 
   <script>
-    require(<%= config %>, ['<%= jsPath %>']);
+    require.config(<%= config %>);
+    require(['<%=jsPath%>'], function() { });
   </script>
 
 </body>

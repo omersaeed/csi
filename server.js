@@ -78,7 +78,7 @@ var serveFile = function(req, resp, filename) {
     });
 };
 
-var serveIndex = function(req, resp, filename, config, extra) {
+var serveIndex = function(req, resp, pathname, config, extra) {
     readIndex(req, resp, indexPath, function(err, compiled) {
         var content, csiPath = path.join(config.baseUrl, config.paths.csi),
 			isTest = /test/i.test(req.url.split('?')[0]);
@@ -95,7 +95,7 @@ var serveIndex = function(req, resp, filename, config, extra) {
 			requireJs: path.join(csiPath, 'require.js'),
 			extra: extra || '',
 			config: JSON.stringify(config, null, " "),
-			jsPath: filename
+			jsPath: pathname
 		});
 
         writeHead(req, resp, 200, _.extend({}, defaultHeaders, {
@@ -119,7 +119,7 @@ exports.createServer = function(staticDir, config, extra) {
 			filename = path.join(path.dirname(staticDir), requested);
 			path.exists(filename, function(exists) {
 				if (exists) {
-					serveIndex(req, resp, requested, config, extra);
+					serveIndex(req, resp, u.pathname.replace(/^\//, ''), config, extra);
 				} else {
 					serve404(req, resp);
 				}

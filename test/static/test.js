@@ -14,9 +14,9 @@ require({
 
 require([
 	'a',
-    'path!test-component:module',
+    'component!test-component:module',
     'text!fixture.json',
-    'path!test-component:css!100:theme.css'
+    'component!test-component:css!100:theme.css'
 ], function(a, TestComponentModule, fixture) {
 
     // we need to do two layers of `require()` calls since we want to guarantee

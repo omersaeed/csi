@@ -2,7 +2,7 @@
 	"paths": {
 		"text": "./text",
 		"order": "./order",
-		"path": "./path",
+		"component": "./component",
 		"css": "./css"
 	}
 }
