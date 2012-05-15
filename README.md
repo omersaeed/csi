@@ -151,6 +151,7 @@ it's how we manage dependencies.  here's the contents:
         "node": "~0.6.11"
       },
       "dependencies": {
+        "siq-vendor-js": "0.0.x",
         "csi": "0.0.x"
       },
       "component": {
@@ -169,7 +170,7 @@ this is all pretty strait forward, but there are two important things:
 before we get into how we include the bird component, let's write a quick qunit
 test to cover ourselves in future refactorings:
 
-    require([
+    define([
         'component!vendor:jquery'
         'component!bird:bird'
     ], function($, birdifyIt) {
@@ -236,6 +237,7 @@ and your `package.json` will be:
         "node": "~0.6.11"
       },
       "dependencies": {
+        "siq-vendor-js": "0.0.x",
         "csi": "0.0.x",
         "put-a-bird-on-it": "git://github.com/aaronj1335/put-a-bird-on-it.git"
       }
@@ -261,8 +263,8 @@ and there you have it, modular client-side development.  there are quite a few
 details that we glossed over, such as the mechanics of installing components
 (hint: they go in a directory called `components`), and the fact that [`csi`
 may re-write `url()` paths in `css`][css_url_rewrite] files, but hopefully this
-was an instructive tutorial.  the best way to get a feel for `csi` would
-probably be to check out working examples:
+was an instructive tutorial.  [feel free to tinker/fork/pr][example].  the best
+way to get a feel for `csi` would probably be to check out working examples:
 
  - [`gloss`][gloss]: a UI framework.  this makes heavy use of `csi`.  it also
    includes an example of client-side templating with [John Resig's
@@ -294,3 +296,4 @@ probably be to check out working examples:
 [mocha]: http://visionmedia.github.com/mocha/
 [amd]: https://github.com/amdjs/amdjs-api/wiki/AMD
 [requirejs_css]: https://github.com/VIISON/RequireCSS
+[exampl]: https://github.com/aaronj1335/bird-app-v2
