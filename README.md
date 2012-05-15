@@ -296,4 +296,4 @@ way to get a feel for `csi` would probably be to check out working examples:
 [mocha]: http://visionmedia.github.com/mocha/
 [amd]: https://github.com/amdjs/amdjs-api/wiki/AMD
 [requirejs_css]: https://github.com/VIISON/RequireCSS
-[exampl]: https://github.com/aaronj1335/bird-app-v2
+[example]: https://github.com/aaronj1335/bird-app-v2
