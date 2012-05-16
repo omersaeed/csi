@@ -64,7 +64,6 @@ installTo = (tgtDir, link = false, src, name = null) ->
     if link
       orig = path.resolve process.cwd()
       process.chdir tgtDir
-      console.log "IN THERE"
       fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
     else
@@ -96,8 +95,7 @@ allComponents = () ->
 provide = (pth) ->
   if not exists pth
     _.reduce [""].concat(pth.split(pathSep)), (soFar, dir) ->
-      if not exists(join(soFar, dir))
-        fs.mkdirSync join(soFar, dir)
+      fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
       soFar += (if soFar then pathSep else "") + dir
 
 discoverTests = (dir) ->
