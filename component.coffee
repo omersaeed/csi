@@ -157,6 +157,10 @@ stringBundlesAsRequirejsModule = () ->
   </script>
   """
 
+listTests = (tests, host, port) ->
+  for test in tests
+    console.log("http://#{host}:#{port}/#{test.replace(/\.js$/, "")}")
+
 commands =
 
   install: () ->
@@ -170,22 +174,17 @@ commands =
       src = join(component.path, sourceDirectory(component.path))
       name = componentName(null, component.json)
       installTo componentsDirName, argv.link, src, name
+    if isComponent()
+      installTo componentsDirName, argv.link, 'src', componentName()
 
   test: () ->
     port = process.env.PORT || 1335
     host = process.env.HOST || "localhost"
-    listTests = (tests) ->
-      for test in tests
-        console.log("http://#{host}:#{port}/#{test.replace(/\.js$/, "")}")
     components = allComponents()
     testDirName = testDirectory()
     staticDirName = join (if isComponent() then testDirName else ""), "static"
-    return listTests(discoverTests(staticDirName)) if argv.list
-    if isComponent() and not exists testDirName
-      commands.install()
-    if not exists join(staticDirName, "components", componentName())
-      commands.install()
-      installTo join(staticDirName, "components"), argv.link
+    return listTests(discoverTests(staticDirName), host, port) if argv.list
+    commands.install()
     tests = discoverTests staticDirName
     extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
     testServer
@@ -193,7 +192,7 @@ commands =
       .listen(port, host)
     console.log "serving at http://#{host}:#{port}"
     console.log "available tests:"
-    listTests tests
+    listTests tests, host, port
 
   template: (cmd, args...) ->
     config = getConfig()
