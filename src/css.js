@@ -26,12 +26,7 @@ exports.combineRegExp = function(regex, group){
 		}
 		if (regex[i].names)	names = names.concat(regex[i].names)
 	}
-	try {
-		regex = new RegExp(source,'gm')
-	}
-	catch (e){
-		throw new SyntaxError('Invalid Syntax: ' + source +'; '+ e)
-	}
+	regex = new RegExp(source,'gm')
 	// [key] → 1
 	for (i = -1; i < names.length; ++i) names[names[i]] = i + 1
 	// [1] → key
@@ -72,17 +67,7 @@ var SheetParser = exports.SheetParser
 /*</depend>*/
 
 
-var CSS = SheetParser.CSS = {version: '1.0.2 dev'}
-
-CSS.trim = trim
-function trim(str){
-	// http://blog.stevenlevithan.com/archives/faster-trim-javascript
-	var	str = (''+str).replace(/^\s\s*/, ''),
-		ws = /\s/,
-		i = str.length;
-	while (ws.test(str.charAt(--i)));
-	return str.slice(0, i + 1);
-}
+var CSS = SheetParser.CSS = {version: '1.0.2rc1'}
 
 CSS.camelCase = function(string){
 	return ('' + string).replace(camelCaseSearch, camelCaseReplace)
@@ -102,7 +87,7 @@ CSS.parse = function(cssText){
 	,	i,r,l
 	,	ruleCount
 	
-	rules.cssText = cssText = trim(cssText)
+	rules.cssText = cssText = ('' + cssText)
 	
 	// strip comments
 	cssText = cssText.replace(CSS.comment, '');
@@ -121,39 +106,17 @@ CSS.parse = function(cssText){
 		}
 		
 		rules[rules.length++] = rule = {}
-		for (i = 0, l = names.length; i < l; ++i){
-			if (!(names[i-1] && found[i])) continue
-			rule[names[i-1]] = trim(found[i])
+		for (i = -1, l = names.length; i < l; ++i){
+			if (!found[i]) continue
+			rule[names[i-1]] = found[i]
 		}
 	}
 	
-	var atKey, atRule, atList, atI
-	for (i = 0, l = rules.length; i < l; ++i){
-		if (!rules[i]) continue
+	for (i = -1, l = rules.length; i < l; ++i){
+		if (!rules[i] || !rules[i].style_cssText) continue
 		
-		if (rules[i]._style_cssText){
-			rules[i].style = CSS.parse(rules[i]._style_cssText)
-			delete rules[i]._style_cssText
-		}
+		rules[i].style = CSS.parse(rules[i].style_cssText)
 		
-		// _atKey/_atValue
-		if (atKey = rules[i]._atKey){
-			atKey = CSS.camelCase(atKey)
-			atRule = {length:0}
-			rules[i][atKey] = atRule
-			atRule["_source"] =
-			atRule[atKey + "Text"] = rules[i]._atValue
-			atList = ('' + rules[i]._atValue).split(/,\s*/)
-			for (atI = 0; atI < atList.length; ++atI){
-				atRule[atRule.length ++] = atList[atI]
-			}
-			rules[i].length = 1
-			rules[i][0] = atKey
-			delete rules[i]._atKey
-			delete rules[i]._atValue
-		}
-		
-		if (rules[i].style)
 		for (ruleCount = -1, r = -1, rule; rule = rules[i].style[++r];){
 			if (typeof rule == 'string') continue
 			rules[i][r] = (rules[i].cssRules || (rules[i].cssRules = {}))[++ ruleCount]  = rule
@@ -166,58 +129,34 @@ CSS.parse = function(cssText){
 }
 
 var x = combineRegExp
-var OR = '|'
 
-;(CSS.at = x(/\s*@([-a-zA-Z0-9]+)\s+(([\w-]+)?[^;{]*)/))
-.names=[         '_atKey',           '_atValue', 'name']
+;(CSS.at = x(/\s*(@[-a-zA-Z0-9]+)\s+([^;{]*)/))
+.names=[         'kind',              'name']
 
 CSS.atRule = x([CSS.at, ';'])
 
 ;(CSS.keyValue_key = x(/([-a-zA-Z0-9]+)/))
 .names=[                '_key']
 
-;(CSS.keyValue_value_end = x(/(?:;|(?=\})|$)/))
-
-;(CSS.notString = x(/[^"']+/))
-;(CSS.stringSingle = x(/"(?:[^"]|\\")*"/))
-;(CSS.stringDouble = x(/'(?:[^']|\\')*'/))
-;(CSS.string = x(['(?:',CSS.stringSingle ,OR, CSS.stringDouble,')']))
-;(CSS.propertyValue = x([/[^;}]+/, CSS.keyValue_value_end]))
-
-var rRound = "(?:[^()]|\\((?:[^()]|\\((?:[^()]|\\((?:[^()]|\\([^()]*\\))*\\))*\\))*\\))"
-
-;(CSS.keyValue_value = x(
-[
-	x(['((?:'
-	,	CSS.stringSingle
-	,	OR
-	,	CSS.stringDouble
-	,	OR
-	,	"\\("+rRound+"*\\)"
-	,	OR
-	,	/[^;}()]/ // not a keyValue_value terminator
-	,	')*)'
-	])
-,	CSS.keyValue_value_end
-])).names = ['_value']
+;(CSS.keyValue_value = x(/(.*?)(?:;|(?=\})|$)/))
+.names=[                  '_value']
 
 ;(CSS.keyValue = x([CSS.keyValue_key ,/\s*:\s*/, CSS.keyValue_value]))
 
 ;(CSS.comment = x(/\/\*\s*((?:[^*]|\*(?!\/))*)\s*\*\//))
 .names=[                   'comment']
 
-;(CSS.selector = x(['(',/\s*(\d+%)\s*/,OR,'(?:',/[^{}'"()]|\([^)]*\)|\[[^\]]*\]/,')+',')']))
-.names=[    'selectorText','keyText']
+;(CSS.selector = x(/\s*((\d+%)|[^\{}]+?)\s*/))
+.names=[               'selectorText','keyText']
 
-var rCurly = "(?:[^{}]|\\{(?:[^{}]|\\{(?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*\\})*\\})"
-var rCurlyRound = "(?:[^{}()]+|\\{(?:[^{}()]+|\\{(?:[^{}()]+|\\{(?:[^{}()]+|\\{[^{}()]*\\})*\\})*\\})*\\})"
-
-;(CSS.block = x("\\{\\s*((?:"+"\\("+rRound+"*\\)|"+rCurly+")*)\\s*\\}"))
-.names=[              '_style_cssText']
+;(CSS.block = x(/\{\s*((?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*\})*)\s*\}/))
+.names=[               'style_cssText']
 
 CSS.selectorBlock = x([CSS.selector, CSS.block])
 
 CSS.atBlock = x([CSS.at, CSS.block])
+
+var OR = '|'
 
 CSS.parser = x
 (
