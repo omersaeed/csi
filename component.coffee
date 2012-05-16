@@ -10,6 +10,7 @@ testServer = require "./server"
 read = (fname, encoding="utf8") -> fs.readFileSync(fname, encoding)
 exists = path.existsSync
 join = path.join
+pathSep = path.normalize("/")
 argv = null
 
 usage = """node $0 [-l] install
@@ -63,6 +64,7 @@ installTo = (tgtDir, link = false, src, name = null) ->
     if link
       orig = path.resolve process.cwd()
       process.chdir tgtDir
+      console.log "IN THERE"
       fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
     else
@@ -93,9 +95,10 @@ allComponents = () ->
 
 provide = (pth) ->
   if not exists pth
-    _.reduce [""].concat(pth.split("/")), (soFar, dir) ->
-      fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
-      soFar += (if soFar then "/" else "") + dir
+    _.reduce [""].concat(pth.split(pathSep)), (soFar, dir) ->
+      if not exists(join(soFar, dir))
+        fs.mkdirSync join(soFar, dir)
+      soFar += (if soFar then pathSep else "") + dir
 
 discoverTests = (dir) ->
   dir ||= if isComponent() then join(testDirectory(), "static") else "static"
@@ -184,7 +187,7 @@ commands =
       commands.install()
     if not exists join(staticDirName, "components", componentName())
       commands.install()
-      installTo join(staticDirName, "components"), true
+      installTo join(staticDirName, "components"), argv.link
     tests = discoverTests staticDirName
     extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
     testServer
