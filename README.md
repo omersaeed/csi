@@ -7,10 +7,11 @@ client side package tools for team players
 `csi` is a client side package manager for industrial strength software
 projects.  it's built on [`require.js`][requirejs], and it allows you to write
 full client-side components (`html`, `css`, and `javascript`) that can be
-installed anywhere within your app.  some features:
+installed anywhere within your app.  `csi` aims to be:
 
  - **backend agnostic** -- `csi` doesn't assume anything other than
-   [`npm`][npm] for dependency management.
+   [`npm`][npm] for dependency management.  you can use it with whatever
+   server-side framework you prefer.
 
  - **test-driven** -- `csi` provides built-in, easy to use testing with
    [`qunit`][qunit], and it can be easily extended to use other frameworks like
@@ -35,9 +36,7 @@ haven't even heard of their framework yet][spire].  it goes something like
 this:
 
     var birdifyIt = function(node) {
-        var el = document.createElement('div');
-        el.className = 'with-a-bird-on-it';
-        node.appendChild(el);
+        $('<div>').addClass('with-a-bird-on-it').appendTo(node);
     };
 
 and then you throw some css up somewhere:
@@ -48,32 +47,32 @@ and then you throw some css up somewhere:
       background-image: url(bird.png);
     }
 
-but you want to leverage amd for code reuse, so you put it in a module:
+but you want to leverage `amd` for code reuse, so you put it in a module:
 
-    define([], function() {
+    define([
+        'jquery'
+    ], function($) {
         return function(node) {
-            var el = document.createElement('div');
-            el.className = 'with-a-bird-on-it';
-            node.appendChild(el);
+            $('<div>').addClass('with-a-bird-on-it').appendTo(node);
         };
     });
 
-you're even so savvy that you write a css plugin for `require.js`.  that way
-you can abstract the details of the code from the caller:
+you're even so savvy that you write a `css` plugin for `require.js` (maybe
+something like [this][requirejs_css]).  that way you can abstract the details
+of the code's styling from the caller:
 
     define([
+        'jquery',
         'css!bird.css'
-    ], function() {
+    ], function($) {
         return function(node) {
-            var el = document.createElement('div');
-            el.className = 'with-a-bird-on-it';
-            node.appendChild(el);
+            $('<div>').addClass('with-a-bird-on-it').appendTo(node);
         };
     });
 
 your code works, it's modular, your company is selling crap with birds on it
 left and right, and your boss is so happy he comes over to your cubicle and
-he says:
+he's all like:
 
 > man that put-a-bird-on-it code you wrote is so sick, lets use it in our new
 > app, version 2.0!
@@ -84,7 +83,7 @@ like any good engineering organization, you guys completely re-architected
 everything in version 2.0, and now you're putting modules into their own little
 subdirectories in order to help separate concerns.  you throw your bird module
 into the `components/bird` directory, and BOOM, it stops working because the
-paths to `bird.css` and `bird.png` have changed.
+paths to `jquery.js`, `bird.css`, `bird.png` have changed.
 
 so now you've got to edit the bird code in order to put it in a new app.
 that's not optimal, and since you didn't write any unit tests for it, you've
@@ -106,30 +105,37 @@ directory structure:
 `bird.js` looks like:
 
     define([
-        'path!bird:css!bird.css'
+        'component!vendor:jquery',
+        'css!./bird.css'
     ], function() {
         return function(node) {
-            var el = document.createElement('div');
-            el.className = 'with-a-bird-on-it';
-            node.appendChild(el);
+            $('<div>').addClass('with-a-bird-on-it').appendTo(node);
         };
     });
 
-let's break down line 2 where we declare the css dependency:
+let's break down line 2 where we declare the `jquery.js` dependency:
 
-    'path!bird:css!bird.css'
+    'component!vendor:jquery'
 
- - `path!`: we're using the 'path' plugin
+ - `component!`: we're using the 'component' plugin
 
- - `bird:`: we're telling the 'path' plugin that this dependency comes from the
-   'bird' component.  this is another layer of indirection; the 'path'
-   plugin maps 'bird' to our 'components/bird' directory (we'll cover that
-   mapping more later)
+ - `vendor:`: and we want to declare a dependency from the `vendor` component
+
+ - `jquery`: ...and that dependency is `jquery.js`.
+
+the idea is that your plugin needs jquery, but it shouldn't have to know where
+it's located on the server.  so we add an extra level of indirection.  the
+`component` plugin looks up the path to the `vendor` component, and prepends
+that to the target module `jquery.js` at page load (`csi` handles the details of
+this lookup.  it's a bit out of scope for this tutorial though, so don't worry
+about that right now).
+
+let's also break down line 3 where we declare the `css` dependency:
 
  - `css!`: we're still using that slick 'css' plugin
 
- - `bird.css`: and of course our filename, except now it's relative to the bird
-   component, so we won't need to update this if we put it in a different
+ - `./bird.css`: and of course our filename, except now it's relative to the
+   bird component, so we won't need to update this if we put it in a different
    project
 
 we've also included an npm [package.json][package_json] file.  this is
@@ -145,6 +151,7 @@ it's how we manage dependencies.  here's the contents:
         "node": "~0.6.11"
       },
       "dependencies": {
+        "siq-vendor-js": "0.0.x",
         "csi": "0.0.x"
       },
       "component": {
@@ -163,15 +170,14 @@ this is all pretty strait forward, but there are two important things:
 before we get into how we include the bird component, let's write a quick qunit
 test to cover ourselves in future refactorings:
 
-    require([
-        'path!bird:bird'
-    ], function(birdifyIt) {
+    define([
+        'component!vendor:jquery'
+        'component!bird:bird'
+    ], function($, birdifyIt) {
 
         test('put an effin bird on it', function() {
-            var body = document.getElementsByTagName('body')[0], childNodes;
-            birdifyIt(body);
-            childNodes = body.childNodes;
-            equal(childNodes[childNodes.length-1].className, 'with-a-bird-on-it');
+            birdifyIt($('body'));
+            equal($('body').children().last()[0].className, 'with-a-bird-on-it');
         });
 
         start();
@@ -194,12 +200,12 @@ now back to your app version 2.0.  you'll have a directory structure like this:
     |-- package.json
     `-- static
         |-- bluejay.js
-        `-- test.js
+        `-- index.js
 
 your sweet new `bluejay` module extends the functionality of `birdifyIt`:
 
     define([
-        'path!bird:bird'
+        'component!bird:bird'
     ], function(birdifyIt) {
         return function(node) {
             var childNodes;
@@ -214,7 +220,7 @@ your sweet new `bluejay` module extends the functionality of `birdifyIt`:
 
 and then you can add an entry point at `static/index.js`
 
-    require([
+    define([
         'bluejay'
     ], function(bluejay) {
         var body = document.getElementsByTagName('body')[0];
@@ -231,6 +237,7 @@ and your `package.json` will be:
         "node": "~0.6.11"
       },
       "dependencies": {
+        "siq-vendor-js": "0.0.x",
         "csi": "0.0.x",
         "put-a-bird-on-it": "git://github.com/aaronj1335/put-a-bird-on-it.git"
       }
@@ -248,7 +255,7 @@ running tests is still easy:
 since we defined the entry point in `static/index.js`, we can open
 [http://localhost:1335/index][index].  `csi` is smart enough to figure out that
 this is not a test module (since it doesn't have 'test' in the filename), so
-your page loads as without all the qunit stuff.
+your page loads as without all the `qunit` stuff.
 
 ## bada bing
 
@@ -256,8 +263,8 @@ and there you have it, modular client-side development.  there are quite a few
 details that we glossed over, such as the mechanics of installing components
 (hint: they go in a directory called `components`), and the fact that [`csi`
 may re-write `url()` paths in `css`][css_url_rewrite] files, but hopefully this
-was an instructive tutorial.  the best way to get a feel for `csi` would
-probably be to check out working examples:
+was an instructive tutorial.  [feel free to tinker/fork/pr][example].  the best
+way to get a feel for `csi` would probably be to check out working examples:
 
  - [`gloss`][gloss]: a UI framework.  this makes heavy use of `csi`.  it also
    includes an example of client-side templating with [John Resig's
@@ -288,3 +295,5 @@ probably be to check out working examples:
 [qunit]: http://docs.jquery.com/QUnit
 [mocha]: http://visionmedia.github.com/mocha/
 [amd]: https://github.com/amdjs/amdjs-api/wiki/AMD
+[requirejs_css]: https://github.com/VIISON/RequireCSS
+[example]: https://github.com/aaronj1335/bird-app-v2
