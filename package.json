@@ -2,7 +2,7 @@
   "author": "Aaron Stacy <astacy@storediq.com>",
   "name": "csi",
   "description": "siq client-side infrastructure",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "repository": {
     "url": ""
   },
@@ -15,7 +15,8 @@
   },
   "scripts": {
     "install": "node bin/build.js",
-    "test": "node_modules/.bin/coffee component.coffee -l test"
+    "test": "node_modules/.bin/coffee component.coffee -l test",
+    "start": "node server.js"
   },
   "dependencies": {
     "coffee-script": "1.2.x",
