@@ -21,17 +21,21 @@ var defaultHeaders = {
     'Cache-Control': 'must-revalidate, no-cache'
 };
 
-var writeHead = function(req, resp, statusCode, headers) {
+var log = exports.log = function(req, resp, statusCode, path) {
     var d = new Date(),
         seconds = d.getSeconds() < 10? '0' + d.getSeconds() : d.getSeconds(),
         datestring = d.getHours() + ':' + d.getMinutes() + ':' + seconds,
-        line = datestring + ' [' + statusCode + ']: ' + req.url,
+        line = datestring + ' [' + statusCode + ']: ' + path,
         colorized = line;
     if (tty.isatty(process.stdout.fd)) {
         colorized = (+statusCode) >= 500? line.red.bold :
                     (+statusCode) >= 400? line.red : line;
     }
     console.log(colorized);
+};
+
+var writeHead = function(req, resp, statusCode, headers) {
+    log(req, resp, statusCode, req.url);
     resp.writeHead(statusCode, headers);
 };
 
@@ -48,7 +52,7 @@ var readIndex = (function() {
     };
 })();
 
-var serveError = function(req, resp, err) {
+var serveError = exports.serveError = function(req, resp, err) {
     writeHead(req, resp, 500, defaultHeaders);
     resp.write(err + '\n');
     resp.end();
@@ -107,26 +111,42 @@ var serveIndex = function(req, resp, pathname, config, extra) {
     });
 };
 
-exports.createServer = function(staticDir, config, extra) {
+var serveRequest = function(req, resp, staticDir, config, extra) {
+    var filename, u = url.parse(req.url, true),
+        requested = path.join(config.baseUrl || '', u.pathname + '.js');
+    if (!/\.[a-z0-9]+$/i.test(u.pathname)) {
+        filename = path.join(path.dirname(staticDir), requested);
+        path.exists(filename, function(exists) {
+            if (exists) {
+                serveIndex(req, resp, u.pathname.replace(/^\//, ''), config, extra);
+            } else {
+                serve404(req, resp);
+            }
+        });
+    } else {
+        filename = path.join(path.dirname(staticDir), u.pathname);
+        serveFile(req, resp, filename);
+    }
+};
+
+exports.createServer = function(staticDir, config, extra, middlewares) {
 	staticDir = typeof staticDir === 'undefined'? './' : staticDir;
 	config = extend(true, {
 		baseUrl: '/' + path.basename(path.resolve(staticDir))
 	}, config || {});
+    middlewares = middlewares || [];
 	return http.createServer(function(req, resp) {
-		var filename, u = url.parse(req.url, true),
-			requested = path.join(config.baseUrl || '', u.pathname + '.js');
-		if (!/\.[a-z0-9]+$/i.test(u.pathname)) {
-			filename = path.join(path.dirname(staticDir), requested);
-			path.exists(filename, function(exists) {
-				if (exists) {
-					serveIndex(req, resp, u.pathname.replace(/^\//, ''), config, extra);
-				} else {
-					serve404(req, resp);
-				}
-			});
-		} else {
-			filename = path.join(path.dirname(staticDir), u.pathname);
-			serveFile(req, resp, filename);
-		}
+        var wrapped = _.map(middlewares, function(middleware) {
+            return async.apply(middleware.request, req, resp);
+        });
+        async.series(wrapped, function(err, results) {
+            if (err) {
+                serveError(req, resp, err);
+            } else if (_.any(results)) {
+                console.log('request handled by middleware, not serving');
+            } else {
+                serveRequest(req, resp, staticDir, config, extra);
+            }
+        });
 	});
 };

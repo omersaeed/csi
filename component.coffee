@@ -131,6 +131,13 @@ getTestTemplate = () ->
   components = allComponents().concat([{path: "."}])
   (testTemplate(component.path) for component in components).join("\n")
 
+getTestMiddleware = () ->
+  components = allComponents()
+  components.push({path: ".", json: pkgJson()}) if isComponent()
+  require(join(component.path, component.json.component.testMiddleware)) \
+    for component in components when component.json.component.testMiddleware
+
+
 stringBundles = (dir = ".") ->
   stringsYml = join(dir, "strings.yml")
   stringsYaml = join(dir, "strings.yaml")
@@ -188,7 +195,7 @@ commands =
     tests = discoverTests staticDirName
     extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
     testServer
-      .createServer(staticDirName, getConfig(), extraHtml)
+      .createServer(staticDirName, getConfig(), extraHtml, getTestMiddleware())
       .listen(port, host)
     console.log "serving at http://#{host}:#{port}"
     console.log "available tests:"
@@ -233,4 +240,3 @@ exports.run = () ->
 
   commands[command](argv._[1..]...)
 
-exports.run() if require.main is module
