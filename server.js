@@ -54,6 +54,7 @@ var readIndex = (function() {
 
 var serveError = exports.serveError = function(req, resp, err) {
     writeHead(req, resp, 500, defaultHeaders);
+    console.error('`---> ' + err.message);
     resp.write(err + '\n');
     resp.end();
 };
