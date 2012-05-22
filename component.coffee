@@ -29,8 +29,8 @@ componentName = (dir = ".", json = null) ->
 sourceDirectory = (dir = ".") ->
   pkgJson(dir).component?.sourceDirectory || "src"
 
-testDirectory = (dir = ".") ->
-  pkgJson(dir).component?.testDirectory || ".test"
+testDirectory = exports.testDirectory = (dir = ".") ->
+  pkgJson(dir).component?.testDirectory or (exists("static") and ".") or ".test"
 
 testTemplate = (dir = ".") ->
   tt = pkgJson(dir).component?.testTemplate
@@ -99,7 +99,7 @@ provide = (pth) ->
       soFar += (if soFar then pathSep else "") + dir
 
 discoverTests = (dir) ->
-  dir ||= if isComponent() then join(testDirectory(), "static") else "static"
+  dir ||= join testDirectory(), "static"
   return [] if not exists dir
   results = []
   t.dfs dirTree = {path: "."}, (n) ->
@@ -172,10 +172,7 @@ commands =
 
   install: () ->
     components = allComponents()
-    if isComponent()
-      componentsDirName = join testDirectory(), "static/components"
-    else
-      componentsDirName = "static/components"
+    componentsDirName = join testDirectory(), "static/components"
     provide componentsDirName
     for component in components
       src = join(component.path, sourceDirectory(component.path))
@@ -188,8 +185,7 @@ commands =
     port = process.env.PORT || 1335
     host = process.env.HOST || "localhost"
     components = allComponents()
-    testDirName = testDirectory()
-    staticDirName = join (if isComponent() then testDirName else ""), "static"
+    staticDirName = join testDirectory(), "static"
     return listTests(discoverTests(staticDirName), host, port) if argv.list
     commands.install()
     tests = discoverTests staticDirName
