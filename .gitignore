@@ -5,3 +5,4 @@ src/qunit.js
 src/qunit.css
 node_modules
 test/static/components
+build
