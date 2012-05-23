@@ -1,6 +1,6 @@
 import json
 
-from scheme import Text
+from scheme import Sequence, Text
 
 from spire.core import Assembly, Configuration, Unit
 from spire.util import get_package_data
