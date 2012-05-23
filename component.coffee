@@ -26,8 +26,8 @@ componentName = (dir = ".", json = null) ->
 sourceDirectory = (dir = ".") ->
   pkgJson(dir).component?.sourceDirectory || "src"
 
-testDirectory = exports.testDirectory = (dir = ".") ->
-  pkgJson(dir).component?.testDirectory or (exists("static") and ".") or ".test"
+# testDirectory = exports.testDirectory = (dir = ".") ->
+#   pkgJson(dir).component?.testDirectory or argv.staticpath
 
 testTemplate = (dir = ".") ->
   tt = pkgJson(dir).component?.testTemplate
@@ -57,6 +57,7 @@ addComponentToConfig = (rjsConfigObj = {}, dir = ".", root = "components") ->
 installTo = (tgtDir, link = false, src, name = null) ->
   src ||= sourceDirectory()
   name ||= componentName()
+  console.log 'in there',join(tgtDir,name),src,name
   if not exists join(tgtDir, name)
     if link
       orig = path.resolve process.cwd()
@@ -97,7 +98,8 @@ provide = (pth) ->
       soFar += (if soFar then pathSep else "") + dir
 
 discoverTests = (dir) ->
-  dir ||= join testDirectory(), "static"
+  # dir ||= join testDirectory(), "static"
+  dir = argv.staticpath
   return [] if not exists dir
   results = []
   t.dfs dirTree = {path: "."}, (n) ->
@@ -180,8 +182,10 @@ exports.commands = commands =
     install component dependencies
     """
     action: () ->
+      provide argv.staticpath
       components = allComponents()
-      componentsDirName = join testDirectory(), "static/components"
+      # componentsDirName = join testDirectory(), "static/components"
+      componentsDirName = join argv.staticpath, "components"
       provide componentsDirName
       for component in components
         src = join(component.path, sourceDirectory(component.path))
@@ -195,13 +199,13 @@ exports.commands = commands =
     start up a test server
     """
     action: () ->
-      port = process.env.PORT || 1335
-      host = process.env.HOST || "localhost"
+      port = argv.port
+      host = argv.host
       components = allComponents()
-      staticDirName = join testDirectory(), "static"
+      staticDirName = argv.staticpath
       if argv.listtests
         return listTests(discoverTests(staticDirName), host, port)
-      commands.action.install()
+      commands.install.action()
       tests = discoverTests staticDirName
       extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
       testServer
@@ -222,20 +226,13 @@ exports.commands = commands =
   build:
     description: """
     the build command does two things:
-     - if the [staticpath] is given, it will run the `component install`
-       command and then copy the installation directory to [staticpath]
-     - if the [templatepath] is given, it will output a json file named
+     - if the [staticpath] is given, it will run the `component install` command
+     - and if the [templatepath] is given, it will output a json file named
        [contextjsonname] to that path containing the keyed info from the
        `component template` command
     """
     action: () ->
-      if argv.staticpath
-        provide argv.staticpath
-
-        commands.action.install()
-
-        staticDirName = join testDirectory(), "static"
-        wrench.copyDirSyncRecursive staticDirName, argv.staticpath
+      commands.action.install() if argv.staticpath
 
       if argv.templatepath
         config = getConfig()
@@ -275,6 +272,16 @@ exports.run = () ->
       alias: "l"
       describe: "install components as symlinks (useful for development)"
 
+    .options "port",
+      alias: "p"
+      default: process.argv.PORT || 1335
+      describe: "(command: test) test server port, overrides $PORT env variable"
+
+    .options "host",
+      alias: "h"
+      default: process.argv.HOST || "localhost"
+      describe: "(command: test) test server host, overrides $HOST env variable"
+
     .options "listtests",
       boolean: true
       describe: "(command: test) just list tests"
@@ -293,7 +300,10 @@ exports.run = () ->
     .options "staticpath",
       string: true
       alias: "s"
-      describe: "(command: build) specify the static path (dirname for build)"
+      "default": join pkgJson().component?.testDirectory or
+                      (exists("static") and ".") or
+                      ".test", "static"
+      describe: "(command: build) specify the installation path (dynamic)"
 
     .options "baseurl",
       string: true

@@ -4,7 +4,11 @@ src/text.js
 src/qunit.js
 src/qunit.css
 node_modules
-test/static/components
 build
+!test/build*
 *.sw[o|p]
 .project
+
+test/static/components
+test/build1/static/components
+test/build2/mystatic/components

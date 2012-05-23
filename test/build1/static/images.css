@@ -1,0 +1,12 @@
+.something-with-background-image {
+	background: #fff url('background.png') no-repeat right top;
+	background-image: url(background-image.gif);
+}
+
+.something-else-with-background-image {
+	background-image: url("path/to/background-image-quotes.jpeg");
+}
+
+.yet-another-background-image {
+	background-image: url("/my/foo/background-image-quotes.jpeg");
+}

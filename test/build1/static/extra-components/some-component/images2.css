@@ -1,0 +1,12 @@
+.my-component-background-image {
+	background: #fff url('background.png') no-repeat right top;
+	background-image: url(background-image.gif);
+}
+
+.my-component-background-image-again {
+	background-image: url("path/to/background-image-quotes.jpeg");
+}
+
+.my-component-background-image-again-too {
+	background-image: url("/my/foo/background-image-quotes.jpeg");
+}

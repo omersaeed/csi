@@ -24,7 +24,12 @@ node_modules:
 	npm install
 
 test: build
-	node_modules/.bin/coffee component.coffee -l test
+	bin/component_proxy.js test -l &
+	bin/component_proxy.js test -l -s test/build1/static -p 1334
+
+clean_test:
+	rm -rf test/build1/static/components
+	rm -rf test/static/components
 
 clean:
 	node bin/build.js -c
