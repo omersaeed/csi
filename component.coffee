@@ -7,19 +7,15 @@ wrench = require "wrench"
 yaml = require "js-yaml"
 testServer = require "./server"
 
-read = (fname, encoding="utf8") -> fs.readFileSync(fname, encoding)
-write = (fname, content, encoding="utf8") -> fs.writeFileSync(fname, content, encoding)
+read = (fname, encoding="utf8") ->
+  fs.readFileSync(fname, encoding)
+write = (fname, content, encoding="utf8") ->
+  fs.writeFileSync(fname, content, encoding)
 exists = path.existsSync
 join = path.join
 pathSep = path.normalize("/")
 argv = null
-
-usage = """node $0 [-l] install
-node $0 [-l] [--list] test
-
-`component` is a utility that's used for installing javascript components and
-their dependencies -- imagine that!
-"""
+usage = null
 
 pkgJson = (dir = ".") ->
   JSON.parse read(join(dir, "package.json"))
@@ -95,7 +91,8 @@ allComponents = () ->
 
 provide = (pth) ->
   if not exists pth
-    _.reduce [""].concat(pth.split(pathSep)), (soFar, dir) ->
+    start = if pth[0] is pathSep then pathSep else ""
+    _.reduce [start].concat(pth.split(pathSep)), (soFar, dir) ->
       fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
       soFar += (if soFar then pathSep else "") + dir
 
@@ -177,53 +174,78 @@ templateCommands =
   config: (config) ->
     JSON.stringify config, null, "    "
 
-commands =
+exports.commands = commands =
+  install:
+    description: """
+    install component dependencies
+    """
+    action: () ->
+      components = allComponents()
+      componentsDirName = join testDirectory(), "static/components"
+      provide componentsDirName
+      for component in components
+        src = join(component.path, sourceDirectory(component.path))
+        name = componentName(null, component.json)
+        installTo componentsDirName, argv.link, src, name
+      if isComponent()
+        installTo componentsDirName, argv.link, 'src', componentName()
 
-  install: () ->
-    components = allComponents()
-    componentsDirName = join testDirectory(), "static/components"
-    provide componentsDirName
-    for component in components
-      src = join(component.path, sourceDirectory(component.path))
-      name = componentName(null, component.json)
-      installTo componentsDirName, argv.link, src, name
-    if isComponent()
-      installTo componentsDirName, argv.link, 'src', componentName()
+  test:
+    description: """
+    start up a test server
+    """
+    action: () ->
+      port = process.env.PORT || 1335
+      host = process.env.HOST || "localhost"
+      components = allComponents()
+      staticDirName = join testDirectory(), "static"
+      if argv.listtests
+        return listTests(discoverTests(staticDirName), host, port)
+      commands.action.install()
+      tests = discoverTests staticDirName
+      extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
+      testServer
+        .createServer(staticDirName, getConfig(), extraHtml, getTestMiddleware())
+        .listen(port, host)
+      console.log "serving at http://#{host}:#{port}"
+      console.log "available tests:"
+      listTests tests, host, port
 
-  test: () ->
-    port = process.env.PORT || 1335
-    host = process.env.HOST || "localhost"
-    components = allComponents()
-    staticDirName = join testDirectory(), "static"
-    return listTests(discoverTests(staticDirName), host, port) if argv.listtests
-    commands.install()
-    tests = discoverTests staticDirName
-    extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
-    testServer
-      .createServer(staticDirName, getConfig(), extraHtml, getTestMiddleware())
-      .listen(port, host)
-    console.log "serving at http://#{host}:#{port}"
-    console.log "available tests:"
-    listTests tests, host, port
+  template:
+    description: """
+    output html snippets for things like the require.js path, can be any of:
+    #{(' - ' + cmd + '\n' for cmd of templateCommands).join("")}
+    """.replace(/\n$/, '')
+    action: (cmd, args...) ->
+      templateCommands[cmd] getConfig()
 
-  template: (cmd, args...) ->
-    templateCommands[cmd] getConfig()
+  build:
+    description: """
+    the build command does two things:
+     - if the [staticpath] is given, it will run the `component install`
+       command and then copy the installation directory to [staticpath]
+     - if the [templatepath] is given, it will output a json file named
+       [contextjsonname] to that path containing the keyed info from the
+       `component template` command
+    """
+    action: () ->
+      if argv.staticpath
+        provide argv.staticpath
 
-  build: () ->
-    commands.install()
+        commands.action.install()
 
-    staticDirName = join testDirectory(), "static"
-    provide argv.staticpath
-    wrench.copyDirSyncRecursive staticDirName, argv.staticpath
+        staticDirName = join testDirectory(), "static"
+        wrench.copyDirSyncRecursive staticDirName, argv.staticpath
 
-    config = getConfig()
-    templateObj = _.reduce(templateCommands, ((templateObj, cmd, name) ->
-      templateObj[name] = templateCommands[name](config)
-      return templateObj
-    ), {})
-    provide argv.templatepath
-    contextjsonname = join(argv.templatepath, argv.contextjsonname)
-    write contextjsonname, JSON.stringify(templateObj)
+      if argv.templatepath
+        config = getConfig()
+        templateObj = _.reduce(templateCommands, ((templateObj, cmd, name) ->
+          templateObj[name] = templateCommands[name](config)
+          return templateObj
+        ), {})
+        provide argv.templatepath
+        contextjsonname = join(argv.templatepath, argv.contextjsonname)
+        write contextjsonname, JSON.stringify(templateObj)
 
 
 commandNames = _.reduce(commands, ((memo, v, k) ->
@@ -232,38 +254,56 @@ commandNames = _.reduce(commands, ((memo, v, k) ->
   memo
 ), {})
 
+usage = """#{("node $0 "+cmd+'\n' for cmd of commandNames).join("")}
+`component` is a utility that's used for installing javascript components and
+their dependencies -- imagine that!
+
+commands:
+
+"""
+for name, command of commands
+  usage += "
+  #{name}:\n
+    #{command.description.replace(/\n/g, '\n    ')}\n"
+
 exports.run = () ->
   argv = require("optimist")
     .usage(usage)
 
-    .boolean(["l", "link"]).alias("l", "link")
-    .describe("l", "install components as symlinks (useful for development)")
+    .options "link",
+      boolean: true
+      alias: "l"
+      describe: "install components as symlinks (useful for development)"
 
-    .boolean("listtests")
-    .describe("listtests", "when running the 'test' command, just list tests")
+    .options "listtests",
+      boolean: true
+      describe: "(command: test) just list tests"
 
-    .string(["t", "templatepath"]).alias("t", "templatepath")
-    .describe("t", "when running 'build', command, specify the templatepath")
+    .options "templatepath",
+      string: true
+      alias: "t"
+      describe: "(command: build) specify the templatepath"
 
-    .string(["j", "contextjsonname"]).alias("j", "contextjsonname")
-    .default("contextjsonname", "csi-context.json")
-    .describe("j", "when running 'build', command, specify the name of the context json")
+    .options "contextjsonname",
+      string: true
+      alias: "j"
+      "default": "csi-context.json"
+      describe: "(command: build) specify the name of the context json"
 
-    .string(["s", "staticpath"]).alias("s", "staticpath")
-    .describe("s", "when running 'build', command, specify the staticpath")
+    .options "staticpath",
+      string: true
+      alias: "s"
+      describe: "(command: build) specify the static path (dirname for build)"
 
-    .string(["b", "baseurl"]).alias("b", "baseurl")
-    .default("baseurl", "/static")
-    .describe("b", "when running 'build', command, specify the baseurl")
-
-    .check((argv) ->
-      if argv._[0] is 'build'
-        for arg in ['templatepath', 'staticpath']
-          if not argv[arg]
-            throw Error "'#{arg}' option must be defined for 'build' command"
-    )
+    .options "baseurl",
+      string: true
+      alias: "b"
+      "deafault": "/static"
+      describe: "(command: build) specify the baseurl"
 
     .alias("h", "help")
+
+    .wrap(80)
 
     .argv
 
@@ -277,5 +317,5 @@ exports.run = () ->
     require("optimist").showHelp()
     process.exit 1
 
-  commands[command](argv._[1..]...)
+  commands[command].action(argv._[1..]...)
 
