@@ -26,9 +26,6 @@ componentName = (dir = ".", json = null) ->
 sourceDirectory = (dir = ".") ->
   pkgJson(dir).component?.sourceDirectory || "src"
 
-# testDirectory = exports.testDirectory = (dir = ".") ->
-#   pkgJson(dir).component?.testDirectory or argv.staticpath
-
 testTemplate = (dir = ".") ->
   tt = pkgJson(dir).component?.testTemplate
   if tt then read join(dir,tt) else ""
@@ -98,7 +95,6 @@ provide = (pth) ->
       soFar += (if soFar then pathSep else "") + dir
 
 discoverTests = (dir) ->
-  # dir ||= join testDirectory(), "static"
   dir = argv.staticpath
   return [] if not exists dir
   results = []
@@ -184,7 +180,6 @@ exports.commands = commands =
     action: () ->
       provide argv.staticpath
       components = allComponents()
-      # componentsDirName = join testDirectory(), "static/components"
       componentsDirName = join argv.staticpath, "components"
       provide componentsDirName
       for component in components
@@ -199,21 +194,22 @@ exports.commands = commands =
     start up a test server
     """
     action: () ->
-      port = argv.port
-      host = argv.host
       components = allComponents()
-      staticDirName = argv.staticpath
       if argv.listtests
-        return listTests(discoverTests(staticDirName), host, port)
+        return listTests(discoverTests(argv.staticpath), argv.host, argv.port)
       commands.install.action()
-      tests = discoverTests staticDirName
+      tests = discoverTests argv.staticpath
       extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
       testServer
-        .createServer(staticDirName, getConfig(), extraHtml, getTestMiddleware())
-        .listen(port, host)
-      console.log "serving at http://#{host}:#{port}"
+        .createServer(
+          argv.staticpath,
+          getConfig(),
+          extraHtml,
+          getTestMiddleware())
+        .listen(argv.port, argv.host)
+      console.log "serving at http://#{argv.host}:#{argv.port}"
       console.log "available tests:"
-      listTests tests, host, port
+      listTests tests, argv.host, argv.port
 
   template:
     description: """

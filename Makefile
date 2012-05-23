@@ -24,11 +24,13 @@ node_modules:
 	npm install
 
 test: build
+	mkdir test/different_static_dir
+	cp -rf test/static test/different_static_dir/
 	bin/component_proxy.js test -l &
-	bin/component_proxy.js test -l -s test/build1/static -p 1334
+	bin/component_proxy.js test -l -s test/different_static_dir/static -p 1334
 
-clean_test:
-	rm -rf test/build1/static/components
+cleantest:
+	rm -rf test/different_static_dir
 	rm -rf test/static/components
 
 clean:
@@ -37,4 +39,4 @@ clean:
 distclean: clean
 	rm -rf node_modules || true
 
-.PHONY: clean distclean build
+.PHONY: clean cleantest distclean build
