@@ -6,3 +6,5 @@ src/qunit.css
 node_modules
 test/static/components
 build
+*.sw[o|p]
+.project
