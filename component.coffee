@@ -8,6 +8,7 @@ yaml = require "js-yaml"
 testServer = require "./server"
 
 read = (fname, encoding="utf8") -> fs.readFileSync(fname, encoding)
+write = (fname, content, encoding="utf8") -> fs.writeFileSync(fname, content, encoding)
 exists = path.existsSync
 join = path.join
 pathSep = path.normalize("/")
@@ -168,6 +169,14 @@ listTests = (tests, host, port) ->
   for test in tests
     console.log("http://#{host}:#{port}/#{test.replace(/\.js$/, "")}")
 
+templateCommands =
+  requirejs: (config) ->
+    join config.baseUrl || '', config.paths.csi, "require.js"
+  extra: () ->
+    stringBundlesAsRequirejsModule()
+  config: (config) ->
+    JSON.stringify config, null, "    "
+
 commands =
 
   install: () ->
@@ -186,7 +195,7 @@ commands =
     host = process.env.HOST || "localhost"
     components = allComponents()
     staticDirName = join testDirectory(), "static"
-    return listTests(discoverTests(staticDirName), host, port) if argv.list
+    return listTests(discoverTests(staticDirName), host, port) if argv.listtests
     commands.install()
     tests = discoverTests staticDirName
     extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
@@ -198,14 +207,23 @@ commands =
     listTests tests, host, port
 
   template: (cmd, args...) ->
+    templateCommands[cmd] getConfig()
+
+  build: () ->
+    commands.install()
+
+    staticDirName = join testDirectory(), "static"
+    provide argv.staticpath
+    wrench.copyDirSyncRecursive staticDirName, argv.staticpath
+
     config = getConfig()
-    switch cmd
-      when "requirejs"
-        console.log join(config.baseUrl || '', config.paths.csi, "require.js")
-      when "extra"
-        console.log stringBundlesAsRequirejsModule()
-      when "config"
-        console.log JSON.stringify(config, null, "    ")
+    templateObj = _.reduce(templateCommands, ((templateObj, cmd, name) ->
+      templateObj[name] = templateCommands[name](config)
+      return templateObj
+    ), {})
+    provide argv.templatepath
+    contextjsonname = join(argv.templatepath, argv.contextjsonname)
+    write contextjsonname, JSON.stringify(templateObj)
 
 
 commandNames = _.reduce(commands, ((memo, v, k) ->
@@ -217,11 +235,36 @@ commandNames = _.reduce(commands, ((memo, v, k) ->
 exports.run = () ->
   argv = require("optimist")
     .usage(usage)
+
     .boolean(["l", "link"]).alias("l", "link")
     .describe("l", "install components as symlinks (useful for development)")
-    .boolean("list")
-    .describe("list", "when running the 'test' command, just list tests")
+
+    .boolean("listtests")
+    .describe("listtests", "when running the 'test' command, just list tests")
+
+    .string(["t", "templatepath"]).alias("t", "templatepath")
+    .describe("t", "when running 'build', command, specify the templatepath")
+
+    .string(["j", "contextjsonname"]).alias("j", "contextjsonname")
+    .default("contextjsonname", "csi-context.json")
+    .describe("j", "when running 'build', command, specify the name of the context json")
+
+    .string(["s", "staticpath"]).alias("s", "staticpath")
+    .describe("s", "when running 'build', command, specify the staticpath")
+
+    .string(["b", "baseurl"]).alias("b", "baseurl")
+    .default("baseurl", "/static")
+    .describe("b", "when running 'build', command, specify the baseurl")
+
+    .check((argv) ->
+      if argv._[0] is 'build'
+        for arg in ['templatepath', 'staticpath']
+          if not argv[arg]
+            throw Error "'#{arg}' option must be defined for 'build' command"
+    )
+
     .alias("h", "help")
+
     .argv
 
   command = argv._[0]
