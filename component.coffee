@@ -147,7 +147,7 @@ stringBundles = (dir = ".") ->
     {}
 
 allStringBundles = () ->
-  _.reduce(allComponents().concat([stringBundles()]), ((strings, component) ->
+  _.reduce(allComponents().concat([{path: "."}]), ((strings, component) ->
     extend true, strings, stringBundles(component.path)
   ), {})
 
