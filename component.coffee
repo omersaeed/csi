@@ -13,6 +13,7 @@ write = (fname, content, encoding="utf8") ->
   fs.writeFileSync(fname, content, encoding)
 exists = path.existsSync
 join = path.join
+basename = path.basename
 pathSep = path.normalize("/")
 argv = null
 usage = null
@@ -57,11 +58,13 @@ installTo = (tgtDir, link = false, src, name = null) ->
   name ||= componentName()
   if not exists join(tgtDir, name)
     if link
+      log "link-installing #{name} to #{tgtDir}"
       orig = path.resolve process.cwd()
       process.chdir tgtDir
       fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
     else
+      log "installing #{name} to #{tgtDir}"
       wrench.copyDirSyncRecursive src, join(tgtDir, name)
 
 allNodeModules = () ->
@@ -89,6 +92,7 @@ allComponents = () ->
 
 provide = (pth) ->
   if not exists pth
+    log "recursively creating directory `#{pth}`"
     start = if pth[0] is pathSep then pathSep else ""
     _.reduce [start].concat(pth.split(pathSep)), (soFar, dir) ->
       fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
@@ -118,7 +122,6 @@ getConfig = (root = "components") ->
     if not isComponent() then return {}
     destPath = join(root, componentName())
     addComponentToConfig(makePathsAbsolute(requirejsConfig(), destPath))
-  console.log 'in there',argv.baseurlSpecified,argv.baseurl
   baseUrl = if argv.baseurlSpecified then {baseUrl: argv.baseurl} else {}
   extend.apply this, [true, baseUrl]
     .concat(componentConfig(c) for c in components)
@@ -135,6 +138,8 @@ getTestMiddleware = () ->
   require(join(component.path, component.json.component.testMiddleware)) \
     for component in components when component.json.component.testMiddleware
 
+componentsPath = () ->
+  join argv.staticpath, "components"
 
 stringBundles = (dir = ".") ->
   stringsYml = join(dir, "strings.yml")
@@ -173,6 +178,12 @@ templateCommands =
     stringBundlesAsRequirejsModule()
   config: (config) ->
     JSON.stringify config, null, "    "
+  all: (config) ->
+    _.reduce(templateCommands, ((templateObj, cmd, name) ->
+      return templateObj if name is "all"
+      templateObj[name] = templateCommands[name](config)
+      return templateObj
+    ), {})
 
 exports.commands = commands =
   install:
@@ -182,14 +193,13 @@ exports.commands = commands =
     action: () ->
       provide argv.staticpath
       components = allComponents()
-      componentsDirName = join argv.staticpath, "components"
-      provide componentsDirName
+      provide componentsPath()
       for component in components
         src = join(component.path, sourceDirectory(component.path))
         name = componentName(null, component.json)
-        installTo componentsDirName, argv.link, src, name
+        installTo componentsPath(), argv.link, src, name
       if isComponent()
-        installTo componentsDirName, argv.link, 'src', componentName()
+        installTo componentsPath(), argv.link, 'src', componentName()
 
   test:
     description: """
@@ -208,8 +218,8 @@ exports.commands = commands =
           extraHtml,
           getTestMiddleware())
         .listen(argv.port, argv.host)
-      console.log "serving at http://#{argv.host}:#{argv.port}"
-      console.log "available tests:"
+      log "serving at http://#{argv.host}:#{argv.port}"
+      log "available tests:"
       listTests tests, argv.host, argv.port
 
   template:
@@ -218,37 +228,55 @@ exports.commands = commands =
     #{(' - ' + cmd + '\n' for cmd of templateCommands).join("")}
     """.replace(/\n$/, '')
     action: (cmd, args...) ->
-      templateCommands[cmd] getConfig()
+      console.log templateCommands[cmd](getConfig())
 
   build:
     description: """
     the build command does two things:
-     - run `component install` IF the [staticpath] is given
-     - and if the [templatepath] is given, it will output a json file named
+     - run `component install`
+     - if the [templatepath] is given, output a json file named
        [contextjsonname] to that path containing the keyed info from the
        `component template` command
     """
     action: () ->
-      commands.install.action() if argv.staticpathSpec
+      commands.install.action()
 
       if argv.templatepath
-        config = getConfig()
-        templateObj = _.reduce(templateCommands, ((templateObj, cmd, name) ->
-          templateObj[name] = templateCommands[name](config)
-          return templateObj
-        ), {})
+        templateObj = templateCommands.all getConfig()
         provide argv.templatepath
         contextjsonname = join(argv.templatepath, argv.contextjsonname)
+        log "writing context json to #{contextjsonname}"
         write contextjsonname, JSON.stringify(templateObj)
 
   completion:
     description: """
     spits out a bash completion command.  something you can run like this:
-      $ `component completion`
+      $ component completion > /tmp/cc.bash && source /tmp/cc.bash
     """
     action: () ->
-      console.log "complete -W #{(c for c of commands).join(" ")} component"
+      console.log "complete -W \"#{(c for c of commands).join(" ")}\" component"
 
+  uninstall:
+    description: """
+    just does the opposite of the `component install` command -- it removes
+    directories (or links) from [staticpath] that would have been installed
+    """
+    action: () ->
+      components = allComponents()
+      if isComponent()
+        components.push {json: {component: {name: componentName()}}}
+      for component in components
+        installedTo = join(componentsPath(), component.json.component.name)
+        if exists installedTo
+          if fs.lstatSync(installedTo).isSymbolicLink()
+            log "removing link #{installedTo}"
+            fs.unlinkSync installedTo
+          else
+            log "removing directory #{installedTo}"
+            wrench.rmdirSyncRecursive installedTo
+
+log = (msg, level="info") ->
+  console.log "[#{basename process.argv[1]} #{argv._[0]}] #{msg}"
 
 usage = """#{("node $0 "+cmd+'\n' for cmd of commands).join("")}
 `component` is a utility that's used for installing javascript components and
@@ -307,7 +335,13 @@ exports.parseArgs = parseArgs = () ->
       "default": join json.component?.testDirectory or
                       (exists("static") and ".") or
                       ".test", "static"
-      describe: "specify the installation path (dynamic)\n(cmd: build)"
+      describe: """
+      specify the installation path.  the default for this value is dynamically determined:
+       - if there is a package.json file with a component.testDirectory property, staticpath is set to that
+       - otherwise if the './static' directory exits, staticpath is set to 'static'
+       - finally if nothing else component will create a '.test' directory and use it as the staticpath
+       (cmd: build)
+       """
 
     .option "baseurl",
       string: true
