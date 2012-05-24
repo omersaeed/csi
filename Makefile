@@ -23,15 +23,22 @@ vendor/requirejs/%.js:
 node_modules:
 	npm install
 
-test: build
+test: cleantest build
+	bin/component_proxy.js build --templatepath test/static --baseurl /static
 	mkdir test/different_static_dir
 	cp -rf test/static test/different_static_dir/
+	mkdir -p test/different_base_url/mystatic
+	cp -rf test/static/* test/different_base_url/mystatic
+	bin/component_proxy.js build --templatepath test/different_base_url/mystatic --baseurl /mystatic
 	bin/component_proxy.js test -l &
-	bin/component_proxy.js test -l -s test/different_static_dir/static -p 1334
+	bin/component_proxy.js test -l -s test/different_static_dir/static -p 1334 &
+	bin/component_proxy.js test -l -s test/different_base_url/mystatic -p 1333
 
 cleantest:
 	rm -rf test/different_static_dir
+	rm -rf test/different_base_url
 	rm -rf test/static/components
+	rm -rf test/static/csi-context.json
 
 clean:
 	node bin/build.js -c

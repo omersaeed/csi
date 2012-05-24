@@ -11,3 +11,5 @@ build
 test/static/components
 test/*/static/components
 test/different_static_dir
+test/different_base_url
+test/static/csi-context.json

@@ -17,6 +17,7 @@ pathSep = path.normalize("/")
 argv = null
 usage = null
 
+
 pkgJson = (dir = ".") ->
   JSON.parse read(join(dir, "package.json"))
 
@@ -54,7 +55,6 @@ addComponentToConfig = (rjsConfigObj = {}, dir = ".", root = "components") ->
 installTo = (tgtDir, link = false, src, name = null) ->
   src ||= sourceDirectory()
   name ||= componentName()
-  console.log 'in there',join(tgtDir,name),src,name
   if not exists join(tgtDir, name)
     if link
       orig = path.resolve process.cwd()
@@ -118,7 +118,9 @@ getConfig = (root = "components") ->
     if not isComponent() then return {}
     destPath = join(root, componentName())
     addComponentToConfig(makePathsAbsolute(requirejsConfig(), destPath))
-  extend.apply this, [true]
+  console.log 'in there',argv.baseurlSpecified,argv.baseurl
+  baseUrl = if argv.baseurlSpecified then {baseUrl: argv.baseurl} else {}
+  extend.apply this, [true, baseUrl]
     .concat(componentConfig(c) for c in components)
     .concat(componentPath(c) for c in components)
     .concat([thisComponentConfig()])
@@ -175,7 +177,7 @@ templateCommands =
 exports.commands = commands =
   install:
     description: """
-    install component dependencies
+    install component dependencies to [staticpath]
     """
     action: () ->
       provide argv.staticpath
@@ -200,8 +202,7 @@ exports.commands = commands =
       commands.install.action()
       tests = discoverTests argv.staticpath
       extraHtml = getTestTemplate() + "\n" + stringBundlesAsRequirejsModule()
-      testServer
-        .createServer(
+      testServer.createServer(
           argv.staticpath,
           getConfig(),
           extraHtml,
@@ -222,13 +223,13 @@ exports.commands = commands =
   build:
     description: """
     the build command does two things:
-     - if the [staticpath] is given, it will run the `component install` command
+     - run `component install` IF the [staticpath] is given
      - and if the [templatepath] is given, it will output a json file named
        [contextjsonname] to that path containing the keyed info from the
        `component template` command
     """
     action: () ->
-      commands.action.install() if argv.staticpath
+      commands.install.action() if argv.staticpathSpec
 
       if argv.templatepath
         config = getConfig()
@@ -240,14 +241,16 @@ exports.commands = commands =
         contextjsonname = join(argv.templatepath, argv.contextjsonname)
         write contextjsonname, JSON.stringify(templateObj)
 
+  completion:
+    description: """
+    spits out a bash completion command.  something you can run like this:
+      $ `component completion`
+    """
+    action: () ->
+      console.log "complete -W #{(c for c of commands).join(" ")} component"
 
-commandNames = _.reduce(commands, ((memo, v, k) ->
-  memo[k] = true
-  (memo[alias] = true) for alias in (v.aliases || [])
-  memo
-), {})
 
-usage = """#{("node $0 "+cmd+'\n' for cmd of commandNames).join("")}
+usage = """#{("node $0 "+cmd+'\n' for cmd of commands).join("")}
 `component` is a utility that's used for installing javascript components and
 their dependencies -- imagine that!
 
@@ -259,53 +262,58 @@ for name, command of commands
   #{name}:\n
     #{command.description.replace(/\n/g, '\n    ')}\n"
 
-exports.run = () ->
+exports.parseArgs = parseArgs = () ->
+  json = try
+    pkgJson()
+  catch e
+    {}
+
   argv = require("optimist")
     .usage(usage)
 
-    .options "link",
+    .option "link",
       boolean: true
       alias: "l"
-      describe: "install components as symlinks (useful for development)"
+      describe: "install components as links (useful for dev.. on *nix systems)"
 
-    .options "port",
+    .option "port",
       alias: "p"
       default: process.argv.PORT || 1335
-      describe: "(command: test) test server port, overrides $PORT env variable"
+      describe: "test server port, overrides $PORT env variable\n(cmd: test)"
 
-    .options "host",
+    .option "host",
       alias: "h"
       default: process.argv.HOST || "localhost"
-      describe: "(command: test) test server host, overrides $HOST env variable"
+      describe: "test server host, overrides $HOST env variable\n(cmd: test)"
 
-    .options "listtests",
+    .option "listtests",
       boolean: true
-      describe: "(command: test) just list tests"
+      describe: "just list tests\n(cmd: test)"
 
-    .options "templatepath",
+    .option "templatepath",
       string: true
       alias: "t"
-      describe: "(command: build) specify the templatepath"
+      describe: "specify the templatepath\n(cmd: build)"
 
-    .options "contextjsonname",
+    .option "contextjsonname",
       string: true
       alias: "j"
       "default": "csi-context.json"
-      describe: "(command: build) specify the name of the context json"
+      describe: "specify the name of the context json\n(cmd: build)"
 
-    .options "staticpath",
+    .option "staticpath",
       string: true
       alias: "s"
-      "default": join pkgJson().component?.testDirectory or
+      "default": join json.component?.testDirectory or
                       (exists("static") and ".") or
                       ".test", "static"
-      describe: "(command: build) specify the installation path (dynamic)"
+      describe: "specify the installation path (dynamic)\n(cmd: build)"
 
-    .options "baseurl",
+    .option "baseurl",
       string: true
       alias: "b"
       "deafault": "/static"
-      describe: "(command: build) specify the baseurl"
+      describe: "specify the baseurl\n(cmd: build)"
 
     .alias("h", "help")
 
@@ -313,12 +321,23 @@ exports.run = () ->
 
     .argv
 
-  command = argv._[0]
+  specified = (argName, shorthand) ->
+    argv[argName+'Specified'] = _.any process.argv, (arg) ->
+      RegExp('^-{1,2}' + argName).test(arg) or (arg is "-" + shorthand)
 
+  specified("templatepath", "t")
+  specified("staticpath", "s")
+  specified("baseurl", "b")
+
+  [argv, argv._[0]]
+
+
+exports.run = () ->
+  [argv, command] = parseArgs()
   if argv.help
     console.log require("optimist").help()
     process.exit 0
-  if not command or not commandNames[command]
+  if not commands[command]
     console.error "ERROR: command must be one of: #{k for k,v of commands}\n"
     require("optimist").showHelp()
     process.exit 1

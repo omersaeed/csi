@@ -14,10 +14,15 @@ require({
 
 require([
 	'a',
+	'text!csi-context.json',
     'component!test-component:module',
     'text!fixture.json',
     'component!test-component:css!100:theme.css'
-], function(a, TestComponentModule, fixture) {
+], function(a, csiJson, TestComponentModule, fixture) {
+
+	var baseUrl = '/' + document.getElementsByTagName('script')[0].src
+			.replace(/^http:\/\/[a-zA-Z0-9\-._]+(:\d+)\//, '').split('/')[0],
+		csi = window.csi = JSON.parse(csiJson);
 
     // we need to do two layers of `require()` calls since we want to guarantee
     // that 'style.css' was loaded _after_ 'theme.css'
@@ -75,12 +80,19 @@ require([
 					}
 				}
 				if (/my-component/.test(tag.innerHTML)) {
-					rewritten = '/static/extra-components/some-component/background.png';
+					rewritten = baseUrl + '/extra-components/some-component/background.png';
 					beforeRewrite = "url('background.png')";
 					ok(tag.innerHTML.indexOf(rewritten) >= 0);
 					ok(tag.innerHTML.indexOf(beforeRewrite) === -1);
 				}
 			}
+		});
+
+		// this tests that the `component build --templatepath=* --baseurl=*`
+		// actually outputs a config and that it corresponds with the config
+		// used by the test server
+		test('baseUrl has been set', function() {
+			equal(JSON.parse(csi.config).baseUrl, baseUrl);
 		});
 
         start();
