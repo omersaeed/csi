@@ -1,5 +1,5 @@
 fs = require "fs"
-path = require "path"
+{existsSync: exists, join, basename, resolve, normalize} = require "path"
 extend = require "node.extend"
 _ = require "underscore"
 t = require "t"
@@ -11,13 +11,8 @@ read = (fname, encoding="utf8") ->
   fs.readFileSync(fname, encoding)
 write = (fname, content, encoding="utf8") ->
   fs.writeFileSync(fname, content, encoding)
-exists = path.existsSync
-join = path.join
-basename = path.basename
-pathSep = path.normalize("/")
-argv = null
-usage = null
-
+pathSep = normalize("/")
+argv = usage = null
 
 pkgJson = (dir = ".") ->
   JSON.parse read(join(dir, "package.json"))
@@ -59,7 +54,7 @@ installTo = (tgtDir, link = false, src, name = null) ->
   if not exists join(tgtDir, name)
     if link
       log "link-installing #{name} to #{tgtDir}"
-      orig = path.resolve process.cwd()
+      orig = resolve process.cwd()
       process.chdir tgtDir
       fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
@@ -103,7 +98,7 @@ discoverTests = (dir) ->
   return [] if not exists dir
   results = []
   t.dfs dirTree = {path: "."}, (n) ->
-    if /test[^\/]*\.js$/.test(n.path) and path.basename(n.path)[0] isnt "."
+    if /test[^\/]*\.js$/.test(n.path) and basename(n.path)[0] isnt "."
       results.push(n.path)
     if fs.statSync(join(dir, n.path)).isDirectory()
       n.children = fs.readdirSync(join(dir, n.path)).map (d) ->
@@ -135,7 +130,7 @@ getTestTemplate = () ->
 getTestMiddleware = () ->
   components = allComponents()
   components.push({path: ".", json: pkgJson()}) if isComponent()
-  require(join(component.path, component.json.component.testMiddleware)) \
+  require(resolve(join(component.path, component.json.component.testMiddleware))) \
     for component in components when component.json.component.testMiddleware
 
 componentsPath = () ->
