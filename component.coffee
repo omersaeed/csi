@@ -56,6 +56,10 @@ installTo = (tgtDir, link = false, src, name = null) ->
       log "link-installing #{name} to #{tgtDir}"
       orig = resolve process.cwd()
       process.chdir tgtDir
+      # there's a chance that 'csi' is a dead link (so exists() returns false,
+      # but there's actually a link in the directory).  remove that here.
+      try
+        fs.unlinkSync name
       fs.symlinkSync join(orig, src), name, "dir"
       process.chdir orig
     else
