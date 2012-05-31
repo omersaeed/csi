@@ -68,7 +68,7 @@ installTo = (tgtDir, link = false, src, name = null) ->
 
 allNodeModules = () ->
   modules = {}
-  t.dfs directories = {path: "."}, (n) ->
+  t.bfs directories = {path: "."}, (n) ->
     if exists join(n.path, "package.json")
       n.json = pkgJson n.path
     if exists join(n.path, "requirejs-config.json")
@@ -84,7 +84,7 @@ allNodeModules = () ->
 allComponents = () ->
   results = []
   names = () -> component.json.name for component in results
-  t.dfs allNodeModules(), (m) ->
+  t.bfs allNodeModules(), (m) ->
     if m.json and isComponent(null, m.json) and m.json.name not in names()
       results.push(m)
   _.filter results, (m) -> m.path isnt "."
@@ -101,7 +101,7 @@ discoverTests = (dir) ->
   dir = argv.staticpath
   return [] if not exists dir
   results = []
-  t.dfs dirTree = {path: "."}, (n) ->
+  t.bfs dirTree = {path: "."}, (n) ->
     if /test[^\/]*\.js$/.test(n.path) and basename(n.path)[0] isnt "."
       results.push(n.path)
     if fs.statSync(join(dir, n.path)).isDirectory()
@@ -199,13 +199,6 @@ exports.commands = commands =
         installTo componentsPath(), argv.link, src, name
       if isComponent()
         installTo componentsPath(), argv.link, 'src', componentName()
-
-  doc:
-    description: """
-        builds client side code documentation
-        """
-    action: () ->
-      log "building client side code docs"
 
   test:
     description: """
