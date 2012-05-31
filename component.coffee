@@ -6,6 +6,7 @@ t = require "t"
 wrench = require "wrench"
 yaml = require "js-yaml"
 testServer = require "./server"
+child_process = require "child_process"
 
 read = (fname, encoding="utf8") ->
   fs.readFileSync(fname, encoding)
@@ -199,6 +200,23 @@ exports.commands = commands =
         installTo componentsPath(), argv.link, src, name
       if isComponent()
         installTo componentsPath(), argv.link, 'src', componentName()
+
+  doc:
+    description: """
+        builds client side code documentation
+        """
+    action: () ->
+      log "building client side code docs"
+      docco_lib = require.resolve('docco-husky')
+      docco = docco_lib.substring(0, docco_lib.lastIndexOf "node_modules") +
+              "node_modules/.bin/docco-husky"
+      child_process.execFile(docco, [sourceDirectory()],
+          (error, stdout, stderr) ->
+            if error?
+              console.log(error)
+            else
+              console.log(stdout)
+      )
 
   test:
     description: """
