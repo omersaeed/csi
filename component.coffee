@@ -6,6 +6,7 @@ t = require "t"
 wrench = require "wrench"
 yaml = require "js-yaml"
 testServer = require "./server"
+child_process = require "child_process"
 
 read = (fname, encoding="utf8") ->
   fs.readFileSync(fname, encoding)
@@ -68,7 +69,7 @@ installTo = (tgtDir, link = false, src, name = null) ->
 
 allNodeModules = () ->
   modules = {}
-  t.dfs directories = {path: "."}, (n) ->
+  t.bfs directories = {path: "."}, (n) ->
     if exists join(n.path, "package.json")
       n.json = pkgJson n.path
     if exists join(n.path, "requirejs-config.json")
@@ -84,7 +85,7 @@ allNodeModules = () ->
 allComponents = () ->
   results = []
   names = () -> component.json.name for component in results
-  t.dfs allNodeModules(), (m) ->
+  t.bfs allNodeModules(), (m) ->
     if m.json and isComponent(null, m.json) and m.json.name not in names()
       results.push(m)
   _.filter results, (m) -> m.path isnt "."
@@ -101,7 +102,7 @@ discoverTests = (dir) ->
   dir = argv.staticpath
   return [] if not exists dir
   results = []
-  t.dfs dirTree = {path: "."}, (n) ->
+  t.bfs dirTree = {path: "."}, (n) ->
     if /test[^\/]*\.js$/.test(n.path) and basename(n.path)[0] isnt "."
       results.push(n.path)
     if fs.statSync(join(dir, n.path)).isDirectory()
@@ -206,6 +207,16 @@ exports.commands = commands =
         """
     action: () ->
       log "building client side code docs"
+      docco_lib = require.resolve('docco-husky')
+      docco = docco_lib.substring(0, docco_lib.lastIndexOf "node_modules") +
+              "node_modules/.bin/docco-husky"
+      child_process.execFile(docco, [sourceDirectory()],
+          (error, stdout, stderr) ->
+            if error?
+              console.log(error)
+            else
+              console.log(stdout)
+      )
 
   test:
     description: """
