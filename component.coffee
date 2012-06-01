@@ -198,7 +198,7 @@ exports.commands = commands =
         name = componentName(null, component.json)
         installTo componentsPath(), argv.link, src, name
       if isComponent()
-        installTo componentsPath(), argv.link, 'src', componentName()
+        installTo componentsPath(), argv.link, sourceDirectory(), componentName()
 
   doc:
     description: """
