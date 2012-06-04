@@ -327,7 +327,7 @@ exports.parseArgs = parseArgs = () ->
       describe: "test server port, overrides $PORT env variable\n(cmd: test)"
 
     .option "host",
-      alias: "h"
+      alias: "H"
       default: process.argv.HOST || "localhost"
       describe: "test server host, overrides $HOST env variable\n(cmd: test)"
 
