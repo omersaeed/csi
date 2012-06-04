@@ -29,8 +29,7 @@
     "async": "0.1.x",
     "qunit": "0.5.x",
     "colors": "0.6.x",
-    "Sheet": "1.0.x",
-    "docco-husky": "0.3.x"
+    "Sheet": "1.0.x"
   },
   "devDependencies": {},
   "optionalDependencies": {
