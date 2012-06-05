@@ -1,7 +1,7 @@
 /*global test, asyncTest, ok, equal, deepEqual, start, module, strictEqual, notStrictEqual, raises*/
 define([
-    'component!test-component:util',
-    'component!test-component:css!images2.css'
+    './util',
+    'css!./images2.css'
 ], function(util) {
     return function() {
         ok(util);

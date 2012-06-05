@@ -15,9 +15,9 @@ require({
 require([
 	'a',
 	'text!csi-context.json',
-    'component!test-component:module',
+    'test-component/module',
     'text!fixture.json',
-    'component!test-component:css!100:theme.css'
+    'css!100:test-component/theme.css'
 ], function(a, csiJson, TestComponentModule, fixture) {
 
 	var baseUrl = '/' + document.getElementsByTagName('script')[0].src
