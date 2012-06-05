@@ -38,9 +38,15 @@ requirejsConfig = (filename, dir = ".") ->
   if exists filename then JSON.parse read(filename) else {}
 
 makePathsAbsolute = (rjsConfigObj = {}, root = "components") ->
-  extend true, rjsConfigObj,
-    paths: _.reduce(rjsConfigObj.paths, ((memo, v, k) ->
-      memo[k] = v.replace(/^.\//, root.replace(/\/$/, "") + "/")
+  relativize = (pth) -> pth.replace /^\.\//, "#{root.replace(/\/$/, "")}/"
+  extend rjsConfigObj,
+    paths: _.reduce(rjsConfigObj.paths or {}, ((memo, v, k) ->
+      memo[relativize k] = relativize v
+      memo
+    ), {})
+    shim: _.reduce(rjsConfigObj.shim or {}, ((memo, shim, shimPath) ->
+      memo[relativize shimPath] = extend shim,
+        deps: _.map(shim.deps or [], (d) -> relativize(d))
       memo
     ), {})
 
