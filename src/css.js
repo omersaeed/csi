@@ -166,7 +166,14 @@
 
             appendToHead(css, order);
 
-            setTimeout(load, 0);
+            setTimeout(function() {
+				var dummyStyle = document.createElement('style');
+				appendToHead(dummyStyle, order);
+				setTimeout(function() {
+					head.removeChild(dummyStyle);
+					setTimeout(load, 0);
+				}, 0);
+			}, 0);
         });
     }
 
