@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var copy, sheetParserWrapper, installPythonPackage, build, clean, main,
+var log, copy, sheetParserWrapper, installPythonPackage, build, clean, main,
     fs = require('fs'),
     read = function(filename) { return fs.readFileSync(filename, 'utf8'); },
     exec = require('child_process').exec,
@@ -13,14 +13,18 @@ var copy, sheetParserWrapper, installPythonPackage, build, clean, main,
     moduleBase = resolve(join(__dirname, '..')),
     srcDir = join(moduleBase, 'src'),
     rjsDir = join(moduleBase, 'vendor/requirejs'),
+    rjsTextDir = join(moduleBase, 'vendor/requirejs-text'),
     qunitDir = join(dirname(require.resolve('qunit')), 'deps/qunit/qunit'),
     sources = [
         join(rjsDir, 'require.js'),
-        join(rjsDir, 'text.js'),
-        join(rjsDir, 'order.js'),
+        join(rjsTextDir, 'text.js'),
         join(qunitDir, 'qunit.js'),
         join(qunitDir, 'qunit.css')
     ];
+
+log = function(msg) {
+    console.log('[' + basename(resolve('.')) + '] ' + msg);
+};
 
 
 copy = function(fromPath, toPath) {
@@ -44,9 +48,11 @@ build = function(callback) {
     //     sheetRegExPath = join(sheetPath, 'sg-regex-tools.js'),
     //     sheetParserPath = join(sheetPath, 'SheetParser.CSS.js');
     sources.forEach(function(src) {
+        log('copying "' + basename(src) + '"');
         copy(src, join(srcDir, basename(src)));
     });
 
+    log('writing "css.js" require.js plugin');
     fs.writeFileSync(
             'src/css.js',
             [
@@ -56,7 +62,8 @@ build = function(callback) {
                 read('lib/css_requirejs_plugin.js')
             ].join(''));
 
-    installPythonPackage(callback);
+    // this was necessary, but now it's taken care of externally to this package
+    // installPythonPackage(callback);
 };
 
 clean = function(callback) {
