@@ -40,9 +40,9 @@ installPythonPackage = function(callback) {
 };
 
 build = function(callback) {
-    var sheetPath = dirname(require.resolve('Sheet')),
-        sheetRegExPath = join(sheetPath, 'sg-regex-tools.js'),
-        sheetParserPath = join(sheetPath, 'SheetParser.CSS.js');
+    // var sheetPath = dirname(require.resolve('Sheet')),
+    //     sheetRegExPath = join(sheetPath, 'sg-regex-tools.js'),
+    //     sheetParserPath = join(sheetPath, 'SheetParser.CSS.js');
     sources.forEach(function(src) {
         copy(src, join(srcDir, basename(src)));
     });
