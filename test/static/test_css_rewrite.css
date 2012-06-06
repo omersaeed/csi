@@ -1,0 +1,73 @@
+.button {
+  background-color: white;
+  border: 1px solid #bbbbbb;
+  border-left: 3px solid #57a7eb;
+  border: 1px solid #bbbbbb;
+  border-left: 3px solid #57a7eb;
+  border: 1px solid #bbbbbb;
+  border-left: 3px solid #57a7eb;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  /* webkit example */
+
+  background-image: -webkit-gradient(linear, left bottom, left top, from(rgba(0, 0, 0, 0.2)), to(rgba(0, 0, 0, 0)));
+  /* mozilla example - FF3.6+ */
+
+  background-image: -moz-linear-gradient(center bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  /* IE */
+
+  filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE8 uses -ms-filter for whatever reason...
+   * My tests show that IE8 uses filter so ... whatever */
+
+  -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE 10 */
+
+  /* w3c */
+
+  background-image: linear-gradient(top, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  /* webkit example */
+
+  background-image: -webkit-gradient(linear, left bottom, left top, from(rgba(0, 0, 0, 0.2)), to(rgba(0, 0, 0, 0)));
+  /* mozilla example - FF3.6+ */
+
+  background-image: -moz-linear-gradient(center bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  /* IE */
+
+  filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE8 uses -ms-filter for whatever reason...
+   * My tests show that IE8 uses filter so ... whatever */
+
+  -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE 10 */
+
+  /* w3c */
+
+  background-image: linear-gradient(top, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  /* webkit example */
+
+  background-image: -webkit-gradient(linear, left bottom, left top, from(rgba(0, 0, 0, 0.2)), to(rgba(0, 0, 0, 0)));
+  /* mozilla example - FF3.6+ */
+
+  background-image: -moz-linear-gradient(center bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  /* IE */
+
+  filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE8 uses -ms-filter for whatever reason...
+   * My tests show that IE8 uses filter so ... whatever */
+
+  -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#00000000', endColorStr='#33000000')";
+  /* IE 10 */
+
+  /* w3c */
+
+  background-image: linear-gradient(top, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+}
+

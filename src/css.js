@@ -178,39 +178,16 @@ CSS.parser = x
 
 })();/*global SheetParser*/
 ;(function(context) {
-    var parse, updateCssPaths, url, newUrl,
-        urlRE = /url\((["']?)([^)]+)\1\)/i;
-    updateCssPaths = function(cssText, callback) {
-        var i, j, len, rule, propLen, prop, style,
-            parsed = parse.call(SheetParser.CSS, cssText),
-            output = [];
-
-        for (i = 0, len = parsed.length; i < len; i++) {
-            rule = parsed[i];
-            style = rule.style;
-            output.push('\n'+rule.selectorText+' {\n');
-            for (j = 0, propLen = style.length; j < propLen; j++) {
-                prop = style[j];
-                url = style[prop].match(urlRE);
-                url = url && url[2].slice(0, 5) !== 'data:'? url[2] : null;
-                style[prop] = callback(rule.selectorText, prop, style[prop], url);
-                style[SheetParser.CSS.camelCase(prop)] = style[prop];
-                output.push('  '+prop+': '+style[prop]+';\n');
-            }
-            output.push('}\n');
-        }
-        return output.join('');
+    var updateCssPaths = function(cssText, callback) {
+        return cssText.replace(/url\(\s*(["']?)(.+)\1\s*\)/g,
+                function(match, quote, url, index, cssText) {
+                    return ['url(', quote, callback(url), quote, ')'].join('');
+                });
     };
-    if (require) {
-        if (typeof define === 'function' && define.amd) {
-            parse = SheetParser.CSS.parse;
-            context.updateCssPaths = updateCssPaths;
-        } else {
-            parse = function(cssText) {
-                return new require('Sheet').Sheet(cssText);
-            };
-            exports.updateCssPaths = updateCssPaths;
-        }
+    if (require && typeof define === 'function' && define.amd) {
+        context.updateCssPaths = updateCssPaths;
+    } else {
+        exports.updateCssPaths = updateCssPaths;
     }
 })(this);
 /**
@@ -351,11 +328,14 @@ CSS.parser = x
             css.setAttribute('data-sourceurl', url);
 
 			if (typeof window.updateCssPaths !== 'undefined') {
-				text = window.updateCssPaths(text, function(selector, property, value, cssUrl) {
-					return cssUrl && cssUrl[0] !== '/'?
-						value.replace(cssUrl, basename(url)+'/'+cssUrl) : value;
+				text = window.updateCssPaths(text, function(cssUrl) {
+					return (/^https?:|^data:|^file:|^\//).test(cssUrl)?
+						cssUrl : basename(url) + '/' + cssUrl;
 				});
 			}
+
+			// i don't think this works like it does for JS eval()...
+			text += '\n/*@ sourceURL='+url+' */\n';
 
             if (css.styleSheet) { // b/c of IE...
                 css.styleSheet.cssText = text;
@@ -364,7 +344,6 @@ CSS.parser = x
             }
 
             appendToHead(css, order);
-            // document.getElementsByTagName('head')[0].appendChild(css);
 
             setTimeout(load, 0);
         });
