@@ -50,8 +50,8 @@ build = function(callback) {
     fs.writeFileSync(
             'src/css.js',
             [
-                read(sheetRegExPath),
-                sheetParserWrapper(read(sheetParserPath)),
+                // read(sheetRegExPath),
+                // sheetParserWrapper(read(sheetParserPath)),
                 read('lib/css_rewrite.js'),
                 read('lib/css_requirejs_plugin.js')
             ].join(''));
