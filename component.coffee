@@ -92,7 +92,7 @@ allComponents = () ->
 
 provide = (pth) ->
   if not exists pth
-    log "recursively creating directory `#{pth}`"
+    log "recursively creating directory #{pth}"
     start = if pth[0] is pathSep then pathSep else ""
     _.reduce [start].concat(pth.split(pathSep)), (soFar, dir) ->
       fs.mkdirSync join(soFar, dir) if not exists(join(soFar, dir))
@@ -166,6 +166,14 @@ stringBundlesAsRequirejsModule = () ->
     });
   </script>
   """
+
+defaultStaticpath = () ->
+  json = try
+    pkgJson()
+  catch e
+    {}
+  base = json.component?.testDirectory or (exists("static") and ".") or ".test"
+  join base, "static"
 
 listTests = (tests, host, port) ->
   for test in tests
@@ -265,6 +273,10 @@ exports.commands = commands =
         log "writing context json to #{contextjsonname}"
         write contextjsonname, JSON.stringify(templateObj)
 
+      if resolve(argv.staticpath) isnt resolve(defaultStaticpath())
+        log "installing default static path (#{defaultStaticpath()}) to #{argv.staticpath}"
+        wrench.copyDirSyncRecursive defaultStaticpath(), argv.staticpath
+
   completion:
     description: """
     spits out a bash completion command.  something you can run like this:
@@ -308,11 +320,6 @@ for name, command of commands
     #{command.description.replace(/\n/g, '\n    ')}\n"
 
 exports.parseArgs = parseArgs = () ->
-  json = try
-    pkgJson()
-  catch e
-    {}
-
   argv = require("optimist")
     .usage(usage)
 
@@ -349,9 +356,7 @@ exports.parseArgs = parseArgs = () ->
     .option "staticpath",
       string: true
       alias: "s"
-      "default": join json.component?.testDirectory or
-                      (exists("static") and ".") or
-                      ".test", "static"
+      "default": defaultStaticpath()
       describe: """
       specify the installation path.  the default for this value is dynamically determined:
        - if there is a package.json file with a component.testDirectory property, staticpath is set to that
@@ -363,7 +368,7 @@ exports.parseArgs = parseArgs = () ->
     .option "baseurl",
       string: true
       alias: "b"
-      "deafault": "/static"
+      "default": "/static"
       describe: "specify the baseurl\n(cmd: build)"
 
     .alias("h", "help")
