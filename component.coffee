@@ -266,6 +266,7 @@ exports.commands = commands =
     action: () ->
       if resolve(argv.staticpath) isnt resolve(defaultStaticpath())
         log "installing default static path (#{defaultStaticpath()}) to #{argv.staticpath}"
+        provide argv.staticpath
         wrench.copyDirSyncRecursive defaultStaticpath(), argv.staticpath
 
       commands.install.action()
