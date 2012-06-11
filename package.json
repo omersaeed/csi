@@ -2,7 +2,7 @@
   "author": "Aaron Stacy <astacy@storediq.com>",
   "name": "csi",
   "description": "siq client-side infrastructure",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "repository": {
     "url": ""
   },
