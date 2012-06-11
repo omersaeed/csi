@@ -264,11 +264,11 @@ exports.commands = commands =
        `component template` command
     """
     action: () ->
-      commands.install.action()
-
       if resolve(argv.staticpath) isnt resolve(defaultStaticpath())
         log "installing default static path (#{defaultStaticpath()}) to #{argv.staticpath}"
         wrench.copyDirSyncRecursive defaultStaticpath(), argv.staticpath
+
+      commands.install.action()
 
       if argv.templatepath
         templateObj = templateCommands.all getConfig()
