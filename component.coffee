@@ -266,16 +266,16 @@ exports.commands = commands =
     action: () ->
       commands.install.action()
 
+      if resolve(argv.staticpath) isnt resolve(defaultStaticpath())
+        log "installing default static path (#{defaultStaticpath()}) to #{argv.staticpath}"
+        wrench.copyDirSyncRecursive defaultStaticpath(), argv.staticpath
+
       if argv.templatepath
         templateObj = templateCommands.all getConfig()
         provide argv.templatepath
         contextjsonname = join(argv.templatepath, argv.contextjsonname)
         log "writing context json to #{contextjsonname}"
         write contextjsonname, JSON.stringify(templateObj)
-
-      if resolve(argv.staticpath) isnt resolve(defaultStaticpath())
-        log "installing default static path (#{defaultStaticpath()}) to #{argv.staticpath}"
-        wrench.copyDirSyncRecursive defaultStaticpath(), argv.staticpath
 
   completion:
     description: """
