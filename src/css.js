@@ -27,17 +27,17 @@
     "use strict";
 
     var doc = document,
-		isObject = function(obj) { return obj === Object(obj); },
-		basename = function(path) {
-			var i = path.length-1;
-			while (path[i--] !== '/');
-			return path.slice(0, i+1);
-		},
+        isObject = function(obj) { return obj === Object(obj); },
+        basename = function(path) {
+            var i = path.length-1;
+            while (path[i--] !== '/');
+            return path.slice(0, i+1);
+        },
         head = doc.head || doc.getElementsByTagName('head')[0],
         // Eliminate browsers that admit to not support the link load event (e.g. Firefox < 9)
         nativeLoad = doc.createElement('link').onload === null ? undefined : false,
         a = doc.createElement('a'),
-		loadAsStyleTags;
+        loadAsStyleTags;
 
     function createLink(url) {
         var link = doc.createElement('link');
@@ -148,15 +148,15 @@
             css.setAttribute('type', 'text/css');
             css.setAttribute('data-sourceurl', url);
 
-			if (typeof window.updateCssPaths !== 'undefined') {
-				text = window.updateCssPaths(text, function(cssUrl) {
-					return (/^https?:|^data:|^file:|^\//).test(cssUrl)?
-						cssUrl : basename(url) + '/' + cssUrl;
-				});
-			}
+            if (typeof window.updateCssPaths !== 'undefined') {
+                text = window.updateCssPaths(text, function(cssUrl) {
+                    return (/^https?:|^data:|^file:|^\//).test(cssUrl)?
+                        cssUrl : basename(url) + '/' + cssUrl;
+                });
+            }
 
-			// i don't think this works like it does for JS eval()...
-			text += '\n/*@ sourceURL='+url+' */\n';
+            // i don't think this works like it does for JS eval()...
+            text += '\n/*@ sourceURL='+url+' */\n';
 
             if (css.styleSheet) { // b/c of IE...
                 css.styleSheet.cssText = text;
@@ -166,17 +166,17 @@
 
             appendToHead(css, order);
 
-			// webkit sometimes doesn't fully load the style even though the
-			// tag has been appended to the head.  append a dummy style and
-			// remove it to ensure that the require'ed style is processesed
+            // webkit sometimes doesn't fully load the style even though the
+            // tag has been appended to the head.  append a dummy style and
+            // remove it to ensure that the require'ed style is processesed
             setTimeout(function() {
-				var dummyStyle = document.createElement('style');
-				appendToHead(dummyStyle, order);
-				setTimeout(function() {
-					head.removeChild(dummyStyle);
-					setTimeout(load, 0);
-				}, 0);
-			}, 0);
+                var dummyStyle = document.createElement('style');
+                appendToHead(dummyStyle, order);
+                setTimeout(function() {
+                    head.removeChild(dummyStyle);
+                    setTimeout(load, 0);
+                }, 0);
+            }, 0);
         });
     }
 
@@ -198,9 +198,9 @@
             load: function (name, req, load, config) {
                 var url, order, split = name.split(':');
 
-				if (isObject(config.css)) {
-					loadAsStyleTags = config.css.loadAsStyleTags;
-				}
+                if (isObject(config.css)) {
+                    loadAsStyleTags = config.css.loadAsStyleTags;
+                }
 
                 // pull off the optional ordering from the name, something like
                 // the '100' in 'css!100:style.css'
@@ -246,7 +246,12 @@
             },
 
             normalize: function(name, normalize) {
-                return normalize(name.indexOf(':') >= 0? name.split(':')[1] : name);
+                var rest = name, order = '0', split = name.split(':');
+                if (split.length > 1) {
+                    order = split[0];
+                    rest = split.slice(1).join(':');
+                }
+                return order + ':' + normalize(rest);
             }
         };
 
