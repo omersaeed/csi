@@ -166,6 +166,9 @@
 
             appendToHead(css, order);
 
+			// webkit sometimes doesn't fully load the style even though the
+			// tag has been appended to the head.  append a dummy style and
+			// remove it to ensure that the require'ed style is processesed
             setTimeout(function() {
 				var dummyStyle = document.createElement('style');
 				appendToHead(dummyStyle, order);
@@ -240,6 +243,10 @@
                 } else {
                     loadSwitch(url, req, load, config, order);
                 }
+            },
+
+            normalize: function(name, normalize) {
+                return normalize(name.indexOf(':') >= 0? name.split(':')[1] : name);
             }
         };
 
