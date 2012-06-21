@@ -38,13 +38,14 @@ requirejsConfig = (filename, dir = ".") ->
   if exists filename then JSON.parse read(filename) else {}
 
 makePathsAbsolute = (rjsConfigObj = {}, root = "components") ->
+  console.log "rjsConfigObj:",rjsConfigObj
   fullPath = (root) -> root.replace /\/$/, ""
   rootBase = (root) -> basename(root).replace /\/$/, ""
-  relativize = (pth, fn = rootBase) -> pth.replace /^\.\//, "#{fn(root)}/"
+  relativize = (pth, fn = rootBase) -> pth.replace /^\.(\/?)/, "#{fn(root)}$1"
 
   extend rjsConfigObj,
     paths: _.reduce(rjsConfigObj.paths or {}, ((memo, v, k) ->
-      memo[relativize k] = relativize v, fullPath
+      memo[relativize(k)] = relativize(v, fullPath)
       memo
     ), {})
     shim: _.reduce(rjsConfigObj.shim or {}, ((memo, shim, shimPath) ->
@@ -133,8 +134,8 @@ getConfig = (root = "components") ->
     addComponentToConfig(makePathsAbsolute(requirejsConfig(), destPath))
   baseUrl = if argv.baseurlSpecified then {baseUrl: argv.baseurl} else {}
   extend.apply this, [true, baseUrl]
-    .concat(componentConfig(c) for c in components)
     .concat(componentPath(c) for c in components)
+    .concat(componentConfig(c) for c in components)
     .concat([thisComponentConfig()])
 
 getTestTemplate = () ->
