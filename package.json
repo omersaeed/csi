@@ -28,13 +28,10 @@
     "js-yaml": "0.3.x",
     "async": "0.1.x",
     "qunit": "git+ssh://git@github.com:jquery/qunit.git",
-    "colors": "0.6.x",
-    "docco-husky": "0.3.x"
+    "colors": "0.6.x"
   },
   "devDependencies": {},
-  "optionalDependencies": {
-    "docco-husky": "0.3.x"
-  },
+  "optionalDependencies": {},
   "component": {
     "name": "csi",
     "testDirectory": "test"
