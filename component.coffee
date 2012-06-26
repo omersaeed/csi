@@ -1,6 +1,6 @@
 fs = require "fs"
 {join, basename, resolve, normalize} = require "path"
-exists = fs.existsSync or path.existsSync
+exists = fs.existsSync or require('path').existsSync
 extend = require "node.extend"
 _ = require "underscore"
 t = require "t"
