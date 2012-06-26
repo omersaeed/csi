@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var log, copy, sheetParserWrapper, installPythonPackage, build, clean, main,
+var log, copy, build, clean, main,
     fs = require('fs'),
     read = function(filename) { return fs.readFileSync(filename, 'utf8'); },
     exec = require('child_process').exec,
@@ -31,39 +31,37 @@ copy = function(fromPath, toPath) {
     fs.writeFileSync(toPath, fs.readFileSync(fromPath, 'utf8'));
 };
 
-sheetParserWrapper = function(js) {
-    return ';(function() {\nvar require;\n' + js + '\n})();';
-};
-
-installPythonPackage = function(callback) {
-    exec('python setup.py install', function(error, stdout, stderr) {
-        process.stdout.write(stdout);
-        process.stderr.write(stderr);
-        callback(error, stdout, stderr);
-    });
+submoduleInit = function(callback) {
+    if (exists(join(__dirname, '../.git'))) {
+        exec('git submodule init', function(error, stdout, stderr) {
+            process.stdout.write(stdout);
+            process.stderr.write(stderr);
+            exec('git submodule update', function(error, stdout, stderr) {
+                process.stdout.write(stdout);
+                process.stderr.write(stderr);
+                callback();
+            });
+        });
+    } else {
+        callback();
+    }
 };
 
 build = function(callback) {
-    // var sheetPath = dirname(require.resolve('Sheet')),
-    //     sheetRegExPath = join(sheetPath, 'sg-regex-tools.js'),
-    //     sheetParserPath = join(sheetPath, 'SheetParser.CSS.js');
-    sources.forEach(function(src) {
-        log('copying "' + basename(src) + '"');
-        copy(src, join(srcDir, basename(src)));
+    submoduleInit(function() {
+        sources.forEach(function(src) {
+            log('copying "' + basename(src) + '"');
+            copy(src, join(srcDir, basename(src)));
+        });
+
+        log('writing "css.js" require.js plugin');
+        fs.writeFileSync(
+                'src/css.js',
+                [
+                    read('lib/css_rewrite.js'),
+                    read('lib/css_requirejs_plugin.js')
+                ].join(''));
     });
-
-    log('writing "css.js" require.js plugin');
-    fs.writeFileSync(
-            'src/css.js',
-            [
-                // read(sheetRegExPath),
-                // sheetParserWrapper(read(sheetParserPath)),
-                read('lib/css_rewrite.js'),
-                read('lib/css_requirejs_plugin.js')
-            ].join(''));
-
-    // this was necessary, but now it's taken care of externally to this package
-    // installPythonPackage(callback);
 };
 
 clean = function(callback) {
