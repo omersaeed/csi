@@ -14,7 +14,7 @@ var log, copy, sheetParserWrapper, installPythonPackage, build, clean, main,
     srcDir = join(moduleBase, 'src'),
     rjsDir = join(moduleBase, 'vendor/requirejs'),
     rjsTextDir = join(moduleBase, 'vendor/requirejs-text'),
-    qunitDir = join(dirname(require.resolve('qunit')), 'deps/qunit/qunit'),
+    qunitDir = dirname(require.resolve('qunit')),
     sources = [
         join(rjsDir, 'require.js'),
         join(rjsTextDir, 'text.js'),
