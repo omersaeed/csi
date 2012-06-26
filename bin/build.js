@@ -31,24 +31,36 @@ copy = function(fromPath, toPath) {
     fs.writeFileSync(toPath, fs.readFileSync(fromPath, 'utf8'));
 };
 
-build = function(callback) {
-    exec('git submodule init', function(error, stdout, stderr) {
-        process.stdout.write(stdout);
-        process.stderr.write(stderr);
-        exec('git submodule update', function(error, stderr, stderr) {
-            sources.forEach(function(src) {
-                log('copying "' + basename(src) + '"');
-                copy(src, join(srcDir, basename(src)));
+submoduleInit = function(callback) {
+    if (exists(join(__dirname, '../.git'))) {
+        exec('git submodule init', function(error, stdout, stderr) {
+            process.stdout.write(stdout);
+            process.stderr.write(stderr);
+            exec('git submodule update', function(error, stdout, stderr) {
+                process.stdout.write(stdout);
+                process.stderr.write(stderr);
+                callback();
             });
-
-            log('writing "css.js" require.js plugin');
-            fs.writeFileSync(
-                    'src/css.js',
-                    [
-                        read('lib/css_rewrite.js'),
-                        read('lib/css_requirejs_plugin.js')
-                    ].join(''));
         });
+    } else {
+        callback();
+    }
+};
+
+build = function(callback) {
+    submoduleInit(function() {
+        sources.forEach(function(src) {
+            log('copying "' + basename(src) + '"');
+            copy(src, join(srcDir, basename(src)));
+        });
+
+        log('writing "css.js" require.js plugin');
+        fs.writeFileSync(
+                'src/css.js',
+                [
+                    read('lib/css_rewrite.js'),
+                    read('lib/css_requirejs_plugin.js')
+                ].join(''));
     });
 };
 
