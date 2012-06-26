@@ -8,6 +8,7 @@ var http = require('http'),
     _ = require('underscore'),
     async = require('async'),
     extend = require('node.extend'),
+    exists = fs.exists || path.exists,
     indexPath = path.resolve(path.join(__dirname, 'templates/index.mtpl'));
 
 var contentType = {
@@ -117,7 +118,7 @@ var serveRequest = function(req, resp, staticDir, config, extra) {
         requested = path.join(config.baseUrl || '', u.pathname + '.js');
     if (!/\.[a-z0-9]+$/i.test(u.pathname)) {
         filename = path.join(path.dirname(staticDir), requested);
-        path.exists(filename, function(exists) {
+        exists(filename, function(exists) {
             if (exists) {
                 serveIndex(req, resp, u.pathname.replace(/^\//, ''), config, extra);
             } else {
