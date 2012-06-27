@@ -12,8 +12,9 @@ var log, copy, build, clean, main, submoduleInit,
     exists = fs.existsSync || path.existsSync,
     moduleBase = resolve(join(__dirname, '..')),
     srcDir = join(moduleBase, 'src'),
-    rjsDir = join(moduleBase, 'vendor/requirejs'),
-    rjsTextDir = join(moduleBase, 'vendor/requirejs-text'),
+    vendorDir = exists(join(moduleBase, 'vendor/requirejs'))? 'vendor' : 'vendor-cache',
+    rjsDir = join(moduleBase, vendorDir, 'requirejs'),
+    rjsTextDir = join(moduleBase, vendorDir, 'requirejs-text'),
     qunitDir = dirname(require.resolve('qunit')),
     sources = [
         join(rjsDir, 'require.js'),
@@ -34,13 +35,11 @@ copy = function(fromPath, toPath) {
 submoduleInit = function(callback) {
     var origDir = process.cwd();
     if (!exists(sources[0])) {
-        console.log('entering directory:',join(__dirname, '..'));
         process.chdir(join(__dirname, '..'));
         exec('git submodule init', function(error, stdout, stderr) {
             process.stdout.write(stdout);
             process.stderr.write(stderr);
             exec('git submodule update', function(error, stdout, stderr) {
-                console.log('going back to directory:',origDir);
                 process.chdir(origDir);
                 process.stdout.write(stdout);
                 process.stderr.write(stderr);
@@ -53,20 +52,18 @@ submoduleInit = function(callback) {
 };
 
 build = function(callback) {
-    submoduleInit(function() {
-        sources.forEach(function(src) {
-            log('copying "' + basename(src) + '"');
-            copy(src, join(srcDir, basename(src)));
-        });
-
-        log('writing "css.js" require.js plugin');
-        fs.writeFileSync(
-                'src/css.js',
-                [
-                    read('lib/css_rewrite.js'),
-                    read('lib/css_requirejs_plugin.js')
-                ].join(''));
+    sources.forEach(function(src) {
+        log('copying "' + basename(src) + '"');
+        copy(src, join(srcDir, basename(src)));
     });
+
+    log('writing "css.js" require.js plugin');
+    fs.writeFileSync(
+            'src/css.js',
+            [
+                read('lib/css_rewrite.js'),
+                read('lib/css_requirejs_plugin.js')
+            ].join(''));
 };
 
 clean = function(callback) {
