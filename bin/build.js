@@ -34,11 +34,13 @@ copy = function(fromPath, toPath) {
 submoduleInit = function(callback) {
     var origDir = process.cwd();
     if (!exists(sources[0])) {
+        console.log('entering directory:',join(__dirname, '..'));
         process.chdir(join(__dirname, '..'));
         exec('git submodule init', function(error, stdout, stderr) {
             process.stdout.write(stdout);
             process.stderr.write(stderr);
             exec('git submodule update', function(error, stdout, stderr) {
+                console.log('going back to directory:',origDir);
                 process.chdir(origDir);
                 process.stdout.write(stdout);
                 process.stderr.write(stderr);
