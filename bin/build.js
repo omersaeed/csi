@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var log, copy, build, clean, main,
+var log, copy, build, clean, main, submoduleInit,
     fs = require('fs'),
     read = function(filename) { return fs.readFileSync(filename, 'utf8'); },
     exec = require('child_process').exec,
@@ -32,7 +32,7 @@ copy = function(fromPath, toPath) {
 };
 
 submoduleInit = function(callback) {
-    if (exists(join(__dirname, '../.git'))) {
+    if (!exists(sources[0])) {
         exec('git submodule init', function(error, stdout, stderr) {
             process.stdout.write(stdout);
             process.stderr.write(stderr);
