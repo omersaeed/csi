@@ -32,11 +32,14 @@ copy = function(fromPath, toPath) {
 };
 
 submoduleInit = function(callback) {
+    var origDir = process.cwd();
     if (!exists(sources[0])) {
+        process.chdir(join(__dirname, '..'));
         exec('git submodule init', function(error, stdout, stderr) {
             process.stdout.write(stdout);
             process.stderr.write(stderr);
             exec('git submodule update', function(error, stdout, stderr) {
+                process.chdir(origDir);
                 process.stdout.write(stdout);
                 process.stderr.write(stderr);
                 callback();
