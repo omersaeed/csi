@@ -27,7 +27,7 @@
     "t": "0.4.x",
     "js-yaml": "0.3.x",
     "async": "0.1.x",
-    "qunit": "git+ssh://git@github.com:jquery/qunit.git",
+    "qunit": "0.2.x",
     "colors": "0.6.x"
   },
   "devDependencies": {},

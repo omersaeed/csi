@@ -19,8 +19,8 @@ var log, copy, build, clean, main, submoduleInit,
     sources = [
         join(rjsDir, 'require.js'),
         join(rjsTextDir, 'text.js'),
-        join(qunitDir, 'qunit.js'),
-        join(qunitDir, 'qunit.css')
+        join(qunitDir, 'deps\\qunit\\qunit\\qunit.js'),
+        join(qunitDir, 'deps\\qunit\\qunit\\qunit.css')
     ];
 
 log = function(msg) {
